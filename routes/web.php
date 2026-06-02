@@ -20,8 +20,7 @@ use App\Http\Controllers\SessionPackageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TrashController;
 use App\Http\Controllers\SettingController;
-
-
+use App\Http\Controllers\TherapistDashboardController;
 
 
 
@@ -32,6 +31,11 @@ Route::get('/', function () {
 
 // لوحة التحكم الرئيسية لإظهار إحصائيات عامة ومواعيد اليوم القادمة
 Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+
+// لوحة تحكم الأخصائي
+Route::get('/my-dashboard', [TherapistDashboardController::class, 'index'])
+    ->middleware(['auth', 'role:أخصائي تخاطب'])
+    ->name('therapist.dashboard');
 Route::middleware('auth')->group(function () {
     // إدارة الملف الشخصي
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -85,8 +89,14 @@ Route::middleware('auth')->group(function () {
     Route::resource('equipment', EquipmentController::class);
     // إدارة الموردين والمخزون
     Route::resource('suppliers', SupplierController::class);
+
     // البرامج العلاجية (الملف السريري للطفل)
+
+    // ⬇️ مسار تقرير الـ PDF (يجب أن يكون قبل الـ resource ليعمل بشكل صحيح)
+    Route::get('/programs/{program}/progress-report', [TherapyProgramController::class, 'progressReport'])->name('programs.progress-report');
+
     Route::resource('programs', TherapyProgramController::class);
+
     // تتبع التطور (Milestones)
     Route::post('/programs/{program}/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
 

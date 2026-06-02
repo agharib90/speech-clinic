@@ -3,6 +3,10 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\TherapyProgram;
+use App\Policies\TherapyProgramPolicy;
+
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -17,8 +21,8 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
-    {
-        //
-    }
+    public function boot()
+{
+    \Gate::policy(TherapyProgram::class, TherapyProgramPolicy::class);
+}
 }

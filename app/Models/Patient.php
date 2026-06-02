@@ -42,4 +42,17 @@ class Patient extends Model
     {
         return $this->hasMany(TherapyProgram::class);
     }
+
+    protected $appends = ['age'];
+
+public function getAgeAttribute(): string
+{
+    $years = $this->birth_date->diffInYears(now());
+    $months = $this->birth_date->diffInMonths(now()) % 12;
+
+    if ($years === 0) return "{$months} شهر";
+    if ($months === 0) return "{$years} سنة";
+    return "{$years} سنة و {$months} شهر";
+}
+
 }

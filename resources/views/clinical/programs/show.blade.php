@@ -6,9 +6,23 @@
         <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">{{ session('success') }}</div>
     @endif
 
-    <div class="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">برنامج: {{ $program->patient->name }}</h2>
-        <p class="text-gray-600 dark:text-gray-400">الأخصائي: {{ $program->therapist->name }} | الأهداف: {{ $program->goals }}</p>
+    <!-- ترويسة الصفحة مع زر الـ PDF -->
+    <div class="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">برنامج: {{ $program->patient->name }}</h2>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">الأخصائي: {{ $program->therapist->name ?? 'غير محدد' }} | الأهداف: {{ $program->goals }}</p>
+        </div>
+
+        <!-- زر تحميل التقرير -->
+        <div class="flex-shrink-0">
+            <a href="{{ route('programs.progress-report', $program->id) }}"
+               class="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm">
+                <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                تحميل تقرير التطور (PDF)
+            </a>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

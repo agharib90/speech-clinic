@@ -12,7 +12,11 @@ class TherapySessionController extends Controller
      */
     public function index()
     {
-        //
+        $programs = TherapyProgram::with('patient', 'therapist')
+    ->where('status', 'جاري')
+    ->latest()
+    ->paginate(15);
+
     }
 
     /**

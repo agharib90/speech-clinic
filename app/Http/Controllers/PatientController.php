@@ -16,10 +16,10 @@ class PatientController extends Controller
         $patients = Patient::with('guardian')
             ->when($search, function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('barcode', 'like', "%{$search}%")
-                      ->orWhereHas('guardian', function ($q) use ($search) {
-                          $q->where('name', 'like', "%{$search}%");
-                      });
+                    ->orWhere('barcode', 'like', "%{$search}%")
+                    ->orWhereHas('guardian', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
             })->latest()->paginate(10);
 
         return view('patients.index', compact('patients'));

@@ -11,6 +11,12 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // لو الـ user أخصائي تخاطب، وجّهه للوحة الخاصة بيه
+        if (auth()->user()->hasRole('أخصائي تخاطب')) {
+            return redirect()->route('therapist.dashboard');
+        }
+
+
         // ١. إحصائيات اليوم
         $todayAppointments = Appointment::whereDate('scheduled_at', today())->count();
         $currentCheckins = PatientCheckin::whereNull('checkout_at')->whereDate('checkin_at', today())->count();
