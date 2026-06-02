@@ -1,0 +1,147 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Users\Ahmed Gharib\AppData\Roaming\npm\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.8.0
+2 info using node@v24.13.0
+3 silly config load:file:C:\Users\Ahmed Gharib\AppData\Roaming\npm\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\Ahmed Gharib\AppData\Local\Microsoft\TypeScript\6.0\.npmrc
+5 silly config load:file:C:\Users\Ahmed Gharib\.npmrc
+6 silly config load:file:C:\Users\Ahmed Gharib\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install @types/less@ts6.0 @types/stylus@ts6.0
+8 verbose argv "install" "--ignore-scripts" "@types/less@ts6.0" "@types/stylus@ts6.0" "--save-dev" "--user-agent" "typesInstaller/6.0.3"
+9 verbose logfile logs-max:10 dir:E:\xampp\htdocs\speech-clinic\.npm-cache\_logs\2026-06-01T23_03_26_739Z-
+10 verbose logfile E:\xampp\htdocs\speech-clinic\.npm-cache\_logs\2026-06-01T23_03_26_739Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly logfile done cleaning log files
+14 silly packumentCache corgi:https://registry.npmmirror.com/@types%2fless cache-miss
+15 silly packumentCache corgi:https://registry.npmmirror.com/@types%2fstylus cache-miss
+16 http fetch GET 200 https://registry.npmmirror.com/@types%2fless 734ms (cache miss)
+17 silly packumentCache corgi:https://registry.npmmirror.com/@types%2fless set size:4328 disposed:false
+18 http fetch GET 200 https://registry.npmmirror.com/@types%2fstylus 1450ms (cache miss)
+19 silly packumentCache corgi:https://registry.npmmirror.com/@types%2fstylus set size:9356 disposed:false
+20 silly idealTree buildDeps
+21 silly fetch manifest @types/less@3.0.8
+22 silly packumentCache full:https://registry.npmmirror.com/@types%2fless cache-miss
+23 http fetch GET 200 https://registry.npmmirror.com/@types%2fless 358ms (cache miss)
+24 silly packumentCache full:https://registry.npmmirror.com/@types%2fless set size:8640 disposed:false
+25 silly fetch manifest @types/stylus@0.48.43
+26 silly packumentCache full:https://registry.npmmirror.com/@types%2fstylus cache-miss
+27 http fetch GET 200 https://registry.npmmirror.com/@types%2fstylus 501ms (cache miss)
+28 silly packumentCache full:https://registry.npmmirror.com/@types%2fstylus set size:13858 disposed:false
+29 silly placeDep ROOT @types/less@3.0.8 OK for:  want: 3.0.8
+30 silly placeDep ROOT @types/stylus@0.48.43 OK for:  want: 0.48.43
+31 silly reify moves {}
+32 silly audit bulk request {
+32 silly audit   '@types/alpinejs': [ '3.13.11' ],
+32 silly audit   '@types/body-parser': [ '1.19.6' ],
+32 silly audit   '@types/braces': [ '3.0.5' ],
+32 silly audit   '@types/busboy': [ '1.5.4' ],
+32 silly audit   '@types/concat-stream': [ '2.0.3' ],
+32 silly audit   '@types/connect': [ '3.4.38' ],
+32 silly audit   '@types/cookie-signature': [ '1.1.2' ],
+32 silly audit   '@types/cors': [ '2.8.19' ],
+32 silly audit   '@types/debug': [ '4.1.13' ],
+32 silly audit   '@types/depd': [ '1.1.37' ],
+32 silly audit   '@types/engine.io': [ '3.1.10' ],
+32 silly audit   '@types/express': [ '5.0.6' ],
+32 silly audit   '@types/express-serve-static-core': [ '5.1.1' ],
+32 silly audit   '@types/express-session': [ '1.19.0' ],
+32 silly audit   '@types/fs-extra': [ '11.0.4' ],
+32 silly audit   '@types/glob-parent': [ '5.1.3' ],
+32 silly audit   '@types/http-errors': [ '2.0.5' ],
+32 silly audit   '@types/is-extglob': [ '2.1.0' ],
+32 silly audit   '@types/is-glob': [ '4.0.4' ],
+32 silly audit   '@types/jsonfile': [ '6.1.4' ],
+32 silly audit   '@types/merge-descriptors': [ '1.0.3' ],
+32 silly audit   '@types/ms': [ '2.1.0' ],
+32 silly audit   '@types/multer': [ '2.1.0' ],
+32 silly audit   '@types/node': [ '25.6.0' ],
+32 silly audit   '@types/node-fetch': [ '2.6.13' ],
+32 silly audit   '@types/normalize-path': [ '3.0.2' ],
+32 silly audit   '@types/on-headers': [ '1.0.4' ],
+32 silly audit   '@types/parseurl': [ '1.3.3' ],
+32 silly audit   '@types/pdf-parse': [ '1.1.5' ],
+32 silly audit   '@types/qrcode': [ '1.5.6' ],
+32 silly audit   '@types/qs': [ '6.15.0' ],
+32 silly audit   '@types/random-bytes': [ '1.0.3' ],
+32 silly audit   '@types/range-parser': [ '1.2.7' ],
+32 silly audit   '@types/react': [ '19.2.14' ],
+32 silly audit   '@types/send': [ '1.2.1' ],
+32 silly audit   '@types/serve-static': [ '2.2.0' ],
+32 silly audit   '@types/triple-beam': [ '1.3.5' ],
+32 silly audit   '@types/type-is': [ '1.6.7' ],
+32 silly audit   '@types/uid-safe': [ '2.1.5' ],
+32 silly audit   '@types/webidl-conversions': [ '7.0.3' ],
+32 silly audit   '@types/whatwg-url': [ '13.0.0' ],
+32 silly audit   '@types/ws': [ '8.18.1' ],
+32 silly audit   '@types/xtend': [ '4.0.6' ],
+32 silly audit   '@types/yargs': [ '17.0.35' ],
+32 silly audit   '@types/yargs-parser': [ '21.0.3' ],
+32 silly audit   asynckit: [ '0.4.0' ],
+32 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+32 silly audit   'combined-stream': [ '1.0.8' ],
+32 silly audit   csstype: [ '3.2.3' ],
+32 silly audit   'delayed-stream': [ '1.0.0' ],
+32 silly audit   'dunder-proto': [ '1.0.1' ],
+32 silly audit   'es-define-property': [ '1.0.1' ],
+32 silly audit   'es-errors': [ '1.3.0' ],
+32 silly audit   'es-object-atoms': [ '1.1.1' ],
+32 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+32 silly audit   'form-data': [ '4.0.5' ],
+32 silly audit   'function-bind': [ '1.1.2' ],
+32 silly audit   'get-intrinsic': [ '1.3.0' ],
+32 silly audit   'get-proto': [ '1.0.1' ],
+32 silly audit   gopd: [ '1.2.0' ],
+32 silly audit   'has-symbols': [ '1.1.0' ],
+32 silly audit   'has-tostringtag': [ '1.0.2' ],
+32 silly audit   hasown: [ '2.0.2' ],
+32 silly audit   'math-intrinsics': [ '1.1.0' ],
+32 silly audit   'mime-db': [ '1.52.0' ],
+32 silly audit   'mime-types': [ '2.1.35' ],
+32 silly audit   'types-registry': [ '0.1.772' ],
+32 silly audit   'undici-types': [ '7.19.2' ],
+32 silly audit   '@types/less': [ '3.0.8' ],
+32 silly audit   '@types/stylus': [ '0.48.43' ]
+32 silly audit }
+33 http cache @types/stylus@https://registry.npmmirror.com/@types/stylus/-/stylus-0.48.43.tgz 0ms (cache hit)
+34 http cache @types/less@https://registry.npmmirror.com/@types/less/-/less-3.0.8.tgz 1ms (cache hit)
+35 silly tarball no local data for @types/stylus@https://registry.npmmirror.com/@types/stylus/-/stylus-0.48.43.tgz. Extracting by manifest.
+36 silly tarball no local data for @types/less@https://registry.npmmirror.com/@types/less/-/less-3.0.8.tgz. Extracting by manifest.
+37 http fetch POST 404 https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk 45ms
+38 verbose audit error HttpErrorGeneral: 404 Not Found - POST https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk - [NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet
+38 verbose audit error     at C:\Users\Ahmed Gharib\AppData\Roaming\npm\node_modules\npm\node_modules\npm-registry-fetch\lib\check-response.js:103:15
+38 verbose audit error     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+38 verbose audit error     at async #getReport (C:\Users\Ahmed Gharib\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\arborist\lib\audit-report.js:275:19)
+38 verbose audit error     at async AuditReport.run (C:\Users\Ahmed Gharib\AppData\Roaming\npm\node_modules\npm\node_modules\@npmcli\arborist\lib\audit-report.js:100:19) {
+38 verbose audit error   headers: [Object: null prototype] {
+38 verbose audit error     server: [ 'Tengine' ],
+38 verbose audit error     date: [ 'Mon, 01 Jun 2026 23:03:31 GMT' ],
+38 verbose audit error     'content-type': [ 'application/json' ],
+38 verbose audit error     'transfer-encoding': [ 'chunked' ],
+38 verbose audit error     connection: [ 'keep-alive' ],
+38 verbose audit error     'strict-transport-security': [ 'max-age=5184000' ],
+38 verbose audit error     via: [ 'ens-cache1.eg1[,404666]' ],
+38 verbose audit error     'timing-allow-origin': [ '*' ],
+38 verbose audit error     eagleid: [ 'a3b5619517803550110666816e' ],
+38 verbose audit error     'x-fetch-attempts': [ '1' ]
+38 verbose audit error   },
+38 verbose audit error   statusCode: 404,
+38 verbose audit error   code: 'E404',
+38 verbose audit error   method: 'POST',
+38 verbose audit error   uri: 'https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk',
+38 verbose audit error   body: {
+38 verbose audit error     error: '[NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet'
+38 verbose audit error   },
+38 verbose audit error   pkgid: undefined
+38 verbose audit error }
+39 silly audit error [object Object]
+40 silly audit report null
+41 http fetch GET 200 https://cdn.npmmirror.com/packages/%40types/stylus/0.48.43/stylus-0.48.43.tgz 1119ms (cache miss)
+42 http fetch GET 200 https://cdn.npmmirror.com/packages/%40types/less/3.0.8/less-3.0.8.tgz 1377ms (cache miss)
+43 silly ADD node_modules/@types/stylus
+44 silly ADD node_modules/@types/less
+45 verbose cwd C:\Users\Ahmed Gharib\AppData\Local\Microsoft\TypeScript\6.0
+46 verbose os Windows_NT 10.0.26100
+47 verbose node v24.13.0
+48 verbose npm  v11.8.0
+49 verbose exit 0
+50 info ok
