@@ -1,4 +1,4 @@
-@include('settings.users._form', [
+@include('users.form', [
     'user'        => null,
     'therapist'   => null,
     'currentRole' => null,

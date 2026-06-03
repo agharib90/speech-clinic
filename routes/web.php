@@ -115,8 +115,8 @@ Route::middleware('auth')->group(function () {
 
     // إدارة المستخدمين والصلاحيات — للمدير فقط
     Route::middleware(['role:مدير النظام'])->group(function () {
-        Route::resource('users', \App\Http\Controllers\UserController::class);
-        Route::post('/users/{user}/toggle-active', [\App\Http\Controllers\UserController::class, 'toggleActive'])
+        Route::resource('users', \App\Http\Controllers\Usercontroller::class);
+        Route::post('/users/{user}/toggle-active', [\App\Http\Controllers\Usercontroller::class, 'toggleActive'])
             ->name('users.toggle-active');
     });
 

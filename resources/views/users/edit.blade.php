@@ -1,1 +1,1 @@
-@include('settings.users._form')
+@include('users.form')

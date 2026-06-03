@@ -16,14 +16,14 @@ class UserController extends Controller
     {
         $users = User::with('roles')->latest()->get();
         $roles = Role::all();
-        return view('settings.users.index', compact('users', 'roles'));
+        return view('users.index', compact('users', 'roles'));
     }
 
     // ── فورم إنشاء مستخدم جديد ────────────────────────────────────────
     public function create()
     {
         $roles = Role::all();
-        return view('settings.users.create', compact('roles'));
+        return view('users.create', compact('roles'));
     }
 
     // ── حفظ مستخدم جديد ───────────────────────────────────────────────
@@ -83,7 +83,7 @@ class UserController extends Controller
         $roles = Role::all();
         $therapist = Therapist::where('user_id', $user->id)->first();
         $currentRole = $user->roles->first()?->name;
-        return view('settings.users.edit', compact('user', 'roles', 'therapist', 'currentRole'));
+        return view('users.edit', compact('user', 'roles', 'therapist', 'currentRole'));
     }
 
     // ── تحديث مستخدم ──────────────────────────────────────────────────

@@ -8,6 +8,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Therapist extends Model
 {
     use SoftDeletes;
+    protected $casts = [
+        'hire_date' => 'date', // هذا يحول النص من DB إلى كائن Carbon أوتوماتيكياً
+    ];
 
     protected $fillable = [
         'user_id', 'name', 'specialization', 'phone', 'email', 'license_number',
