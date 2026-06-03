@@ -25,6 +25,8 @@ use App\Http\Controllers\TherapistDashboardController;
 
 
 
+
+
 Route::get('/', function () {
     return view('welcome');
 });
@@ -89,14 +91,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('equipment', EquipmentController::class);
     // إدارة الموردين والمخزون
     Route::resource('suppliers', SupplierController::class);
-
     // البرامج العلاجية (الملف السريري للطفل)
-
-    // ⬇️ مسار تقرير الـ PDF (يجب أن يكون قبل الـ resource ليعمل بشكل صحيح)
-    Route::get('/programs/{program}/progress-report', [TherapyProgramController::class, 'progressReport'])->name('programs.progress-report');
-
     Route::resource('programs', TherapyProgramController::class);
-
     // تتبع التطور (Milestones)
     Route::post('/programs/{program}/milestones', [MilestoneController::class, 'store'])->name('milestones.store');
 
@@ -116,6 +112,13 @@ Route::middleware('auth')->group(function () {
     // إعدادات العيادة
     Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+
+    // إدارة المستخدمين والصلاحيات — للمدير فقط
+    Route::middleware(['role:مدير النظام'])->group(function () {
+        Route::resource('users', \App\Http\Controllers\UserController::class);
+        Route::post('/users/{user}/toggle-active', [\App\Http\Controllers\UserController::class, 'toggleActive'])
+            ->name('users.toggle-active');
+    });
 
 
 });
