@@ -7,6 +7,8 @@ use App\Models\Guardian;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class PatientController extends Controller
 {
@@ -36,14 +38,20 @@ class PatientController extends Controller
     {
         $data = $request->validated();
 
-        // توليد باركود فريد تلقائياً (مثال: PAT-10005)
-        $lastPatient = Patient::withTrashed()->latest('id')->first();
-        $nextId = $lastPatient ? $lastPatient->id + 1 : 1;
-        $data['barcode'] = 'PAT-' . str_pad($nextId, 5, '0', STR_PAD_LEFT);
-        $data['qr_code'] = $data['barcode']; // الـ QR هيحمل نفس رقم الباركود
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
 
-        Patient::create($data);
+        DB::transaction(function () use ($data) {
+            $data['barcode'] = 'TMP-' . Str::uuid();
+            $data['qr_code'] = $data['barcode'];
+
+            $patient = Patient::create($data);
+            $barcode = 'PAT-' . str_pad($patient->id, 5, '0', STR_PAD_LEFT);
+
+            $patient->update([
+                'barcode' => $barcode,
+                'qr_code' => $barcode,
+            ]);
+        });
 
         return redirect()->route('patients.index')
             ->with('success', 'تم تسجيل الطفل وتوليد الباركود بنجاح');

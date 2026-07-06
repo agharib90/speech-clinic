@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\SessionType;
 use App\Http\Requests\StoreAppointmentRequest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class AppointmentController extends Controller
 {
@@ -47,12 +48,8 @@ class AppointmentController extends Controller
         $conflict = Appointment::where('therapist_id', $validated['therapist_id'])
             ->where('status', '!=', 'ملغى') // المواعيد الملغية لا تتعارض
             ->where(function ($query) use ($scheduledAt, $endAt) {
-                $query->whereBetween('scheduled_at', [$scheduledAt, $endAt])
-                      ->orWhereBetween('end_at', [$scheduledAt, $endAt])
-                      ->orWhere(function ($q) use ($scheduledAt, $endAt) {
-                          $q->where('scheduled_at', '<=', $scheduledAt)
-                            ->where('end_at', '>=', $endAt);
-                      });
+                $query->where('scheduled_at', '<', $endAt)
+                    ->where('end_at', '>', $scheduledAt);
             })->exists();
 
         if ($conflict) {
@@ -75,18 +72,40 @@ class AppointmentController extends Controller
         // تحديث حالة الموعد (مكتمل / غياب / ملغى)
         $request->validate(['status' => 'required|in:مكتمل,غياب,ملغى']);
 
-        $appointment->update(['status' => $request->status]);
-
-        // لو الموعد اكتمل، هنحوله لجلسة علاجية وهنسجل استحقاق الأخصائي
         if ($request->status == 'مكتمل') {
-            $this->convertToSession($appointment);
+            $this->completeAppointment($appointment);
+        } else {
+            $appointment->update(['status' => $request->status]);
         }
 
         return back()->with('success', 'تم تحديث حالة الموعد');
     }
 
     // دالة تحويل الموعد لجلسة واستحقاق مالي
-    protected function convertToSession(Appointment $appointment)
+    public function convertToSession(Appointment $appointment)
+    {
+        $this->completeAppointment($appointment);
+
+        return back()->with('success', 'تم تحويل الموعد إلى جلسة علاجية');
+    }
+
+    protected function completeAppointment(Appointment $appointment)
+    {
+        return DB::transaction(function () use ($appointment) {
+            $appointment = Appointment::whereKey($appointment->id)->lockForUpdate()->firstOrFail();
+            $appointment->load('sessionType');
+
+            $appointment->update(['status' => 'مكتمل']);
+
+            if ($appointment->therapySession()->exists()) {
+                return $appointment->therapySession;
+            }
+
+            return $this->createSessionFromAppointment($appointment);
+        });
+    }
+
+    protected function createSessionFromAppointment(Appointment $appointment)
     {
         // ١. إنشاء جلسة علاجية
         $program = \App\Models\TherapyProgram::firstOrCreate(
@@ -94,10 +113,13 @@ class AppointmentController extends Controller
             ['name' => 'برنامج علاجي', 'session_price' => $appointment->sessionType->price]
         );
 
+        $sessionNumber = \App\Models\TherapySession::where('therapy_program_id', $program->id)->max('session_number') + 1;
+
         $session = \App\Models\TherapySession::create([
             'therapy_program_id' => $program->id,
             'appointment_id' => $appointment->id,
             'session_date' => $appointment->scheduled_at,
+            'session_number' => $sessionNumber,
             'duration_minutes' => $appointment->sessionType->duration_minutes,
             'status' => 'مكتملة',
         ]);
@@ -130,6 +152,7 @@ class AppointmentController extends Controller
         $activePackage = \App\Models\SessionPackage::where('patient_id', $appointment->patient_id)
             ->where('status', 'نشط')
             ->whereColumn('used_sessions', '<', 'total_sessions')
+            ->lockForUpdate()
             ->first();
 
         if ($activePackage) {
@@ -148,5 +171,7 @@ class AppointmentController extends Controller
                 $activePackage->update(['status' => 'مستنفد']);
             }
         }
+
+        return $session;
     }
 }

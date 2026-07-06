@@ -7,6 +7,8 @@ use App\Models\Therapist;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
@@ -168,5 +170,24 @@ class UserController extends Controller
         }
 
         return back()->with('success', 'تم تحديث حالة الحساب');
+    }
+
+    public function resetPassword(User $user)
+    {
+        $temporaryPassword = 'Temp-' . Str::random(10);
+
+        DB::transaction(function () use ($user, $temporaryPassword) {
+            $user->forceFill([
+                'password' => Hash::make($temporaryPassword),
+                'email_verified_at' => now(),
+            ])->save();
+
+            Therapist::where('user_id', $user->id)->update(['is_active' => true]);
+        });
+
+        return back()
+            ->with('success', "تم إعادة ضبط كلمة مرور {$user->name} بنجاح")
+            ->with('temporary_password', $temporaryPassword)
+            ->with('reset_user_email', $user->email);
     }
 }

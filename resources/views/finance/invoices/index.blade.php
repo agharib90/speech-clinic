@@ -3,7 +3,7 @@
 
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">سجل الفواتير</h2>
-        <a href="{{ route('invoices.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">إنشاء فاتورة جديدة</a>
+        <a href="{{ route('invoices.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg dark:bg-blue-500 dark:hover:bg-blue-600">إنشاء فاتورة جديدة</a>
     </div>
 
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-x-auto">
@@ -23,20 +23,23 @@
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-600">
                     <td class="px-6 py-4 font-mono text-sm text-gray-900 dark:text-white">{{ $invoice->invoice_number }}</td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $invoice->patient->name ?? 'محذوف' }}</td>
-                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">{{ number_format($invoice->total, 2) }} ر.س</td>
+
+                    <!-- التعديل هنا: استبدال ر.س بالمتغير الديناميكي -->
+                    <td class="px-6 py-4 font-bold text-gray-900 dark:text-white">{{ number_format($invoice->total, 2) }} {{ $settings->currency ?? 'ر.س' }}</td>
+
                     <td class="px-6 py-4">
                         @if($invoice->status == 'مدفوعة')
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">مدفوعة</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">مدفوعة</span>
                         @elseif($invoice->status == 'مدفوعة جزئياً')
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">مدفوعة جزئياً</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200">مدفوعة جزئياً</span>
                         @else
-                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">غير مدفوعة</span>
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">غير مدفوعة</span>
                         @endif
                     </td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $invoice->issue_date }}</td>
                     <td class="px-6 py-4 space-x-reverse space-x-2">
-                        <a href="{{ route('invoices.show', $invoice) }}" class="text-blue-600 hover:underline">عرض</a>
-                        <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-purple-600 hover:underline">PDF</a>
+                        <a href="{{ route('invoices.show', $invoice) }}" class="text-blue-600 hover:underline dark:text-blue-400">عرض</a>
+                        <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-purple-600 hover:underline dark:text-purple-400">PDF</a>
                     </td>
                 </tr>
                 @endforeach

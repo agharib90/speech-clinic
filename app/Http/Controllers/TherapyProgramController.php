@@ -15,13 +15,24 @@ class TherapyProgramController extends Controller
     use AuthorizesRequests;
     public function index()
     {
+        $this->authorize('viewAny', TherapyProgram::class);
+
         // جلب البرامج النشطة فقط
-        $programs = TherapyProgram::with('patient', 'therapist')->where('status', 'جاري')->latest()->get();
+        $programs = TherapyProgram::with('patient', 'therapist')
+            ->where('status', 'جاري')
+            ->when(auth()->user()->hasRole('أخصائي تخاطب'), function ($query) {
+                $query->where('therapist_id', auth()->id());
+            })
+            ->latest()
+            ->get();
+
         return view('clinical.programs.index', compact('programs'));
     }
 
     public function show(TherapyProgram $program)
     {
+        $this->authorize('view', $program);
+
         // تحميل كل البيانات العيادية المرتبطة بالبرنامج
         $program->load('patient', 'therapist', 'sessions.homeTasks', 'milestones', 'attachments');
         return view('clinical.programs.show', compact('program'));

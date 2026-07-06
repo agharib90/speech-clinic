@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class PackageUsage extends Model
 {
+    protected $table = 'package_usage';
+
     protected $fillable = [
         'session_package_id', 'therapy_session_id', 'used_at'
     ];

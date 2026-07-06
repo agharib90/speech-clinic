@@ -14,7 +14,7 @@ class TherapyProgramPolicy
      */
     public function viewAny(User $user): bool
     {
-        return false;
+        return $user->can('view therapy');
     }
 
     /**
@@ -29,10 +29,8 @@ class TherapyProgramPolicy
             return true;
         }
 
-        // أخصائي التخاطب يرى البرامج التي يملكها هو فقط
         if ($user->hasRole('أخصائي تخاطب')) {
-            // بافتراض أن جدول therapists مرتبط بـ User
-            return $program->therapist_id === $user->therapist->id;
+            return $program->therapist_id === $user->id;
         }
 
         return false;

@@ -8,6 +8,9 @@ use App\Models\InvoicePayment;
 use App\Models\Quotation;
 use App\Models\Patient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
 {
@@ -40,27 +43,31 @@ class InvoiceController extends Controller
             $total += $item['quantity'] * $item['unit_price'];
         }
 
-        // إنشاء الفاتورة
-        $invoice = Invoice::create([
-            'patient_id' => $request->patient_id,
-            'invoice_number' => 'INV-' . str_pad(Invoice::withTrashed()->max('id') + 1, 5, '0', STR_PAD_LEFT),
-            'issue_date' => $request->issue_date,
-            'due_date' => $request->due_date,
-            'total' => $total,
-            'status' => 'غير مدفوعة',
-            'notes' => $request->notes,
-        ]);
-
-        // إنشاء عناصر الفاتورة
-        foreach ($request->items as $item) {
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'description' => $item['description'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'],
-                'total' => $item['quantity'] * $item['unit_price'],
+        DB::transaction(function () use ($request, $total) {
+            $invoice = Invoice::create([
+                'patient_id' => $request->patient_id,
+                'invoice_number' => 'TMP-' . Str::uuid(),
+                'issue_date' => $request->issue_date,
+                'due_date' => $request->due_date,
+                'total' => $total,
+                'status' => 'غير مدفوعة',
+                'notes' => $request->notes,
             ]);
-        }
+
+            $invoice->update([
+                'invoice_number' => 'INV-' . str_pad($invoice->id, 5, '0', STR_PAD_LEFT),
+            ]);
+
+            foreach ($request->items as $item) {
+                InvoiceItem::create([
+                    'invoice_id' => $invoice->id,
+                    'description' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'total' => $item['quantity'] * $item['unit_price'],
+                ]);
+            }
+        });
 
         return redirect()->route('invoices.index')->with('success', 'تم إنشاء الفاتورة بنجاح');
     }
@@ -80,21 +87,29 @@ class InvoiceController extends Controller
             'method' => 'required|string',
         ]);
 
-        InvoicePayment::create([
-            'invoice_id' => $invoice->id,
-            'amount' => $request->amount,
-            'payment_date' => $request->payment_date,
-            'method' => $request->method,
-            'notes' => $request->notes,
-        ]);
+        DB::transaction(function () use ($request, $invoice) {
+            $invoice = Invoice::whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            $alreadyPaid = $invoice->payments()->sum('amount');
 
-        // تحديث حالة الفاتورة
-        $totalPaid = $invoice->payments->sum('amount');
-        if ($totalPaid >= $invoice->total) {
-            $invoice->update(['status' => 'مدفوعة']);
-        } else {
-            $invoice->update(['status' => 'مدفوعة جزئياً']);
-        }
+            if (($alreadyPaid + (float) $request->amount) > (float) $invoice->total) {
+                throw ValidationException::withMessages([
+                    'amount' => 'قيمة الدفعة أكبر من المبلغ المتبقي في الفاتورة.',
+                ]);
+            }
+
+            InvoicePayment::create([
+                'invoice_id' => $invoice->id,
+                'amount' => $request->amount,
+                'payment_date' => $request->payment_date,
+                'method' => $request->method,
+                'notes' => $request->notes,
+            ]);
+
+            $totalPaid = $invoice->payments()->sum('amount');
+            $invoice->update([
+                'status' => $totalPaid >= $invoice->total ? 'مدفوعة' : 'مدفوعة جزئياً',
+            ]);
+        });
 
         return back()->with('success', 'تم تسجيل الدفعة بنجاح');
     }
