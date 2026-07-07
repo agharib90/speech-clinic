@@ -16,12 +16,17 @@ class EquipmentController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate([
-            'name' => 'required',
-            'quantity' => 'required|integer',
-            'reorder_level' => 'required|integer',
+        $data = $request->validate([
+            'name' => 'required|string',
+            'category' => 'nullable|string',
+            'quantity' => 'required|integer|min:0',
+            'unit' => 'nullable|string',
+            'price' => 'nullable|numeric|min:0',
+            'reorder_level' => 'required|integer|min:0',
+            'supplier_id' => 'nullable|exists:suppliers,id',
+            'notes' => 'nullable|string',
         ]);
-        Equipment::create($request->all());
+        Equipment::create($data);
         return back()->with('success', 'تم إضافة المستلزم');
     }
 }

@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\ArticulationAssessmentController;
+use App\Http\Controllers\CaseHistoryController;
+use App\Http\Controllers\ClinicalProgressPointController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DischargeSummaryController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\HomeTaskController;
@@ -15,6 +19,7 @@ use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReceptionController;
 use App\Http\Controllers\SessionPackageController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\StutteringAssessmentController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TherapistController;
 use App\Http\Controllers\TherapistDashboardController;
@@ -27,12 +32,16 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', [DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role_or_permission:أخصائي تخاطب|view reports'])
     ->name('dashboard');
 
 Route::get('/my-dashboard', [TherapistDashboardController::class, 'index'])
     ->middleware(['auth', 'role:أخصائي تخاطب'])
     ->name('therapist.dashboard');
+
+Route::get('/my-cases', [TherapistDashboardController::class, 'cases'])
+    ->middleware(['auth', 'role:أخصائي تخاطب'])
+    ->name('therapist.cases');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -51,6 +60,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:edit patients')->group(function () {
         Route::resource('guardians', GuardianController::class)->only(['edit', 'update']);
         Route::resource('patients', PatientController::class)->only(['edit', 'update']);
+        Route::post('/patients/{patient}/case-history', [CaseHistoryController::class, 'store'])
+            ->name('patients.case-history.store');
     });
     Route::middleware('permission:delete patients')->group(function () {
         Route::resource('guardians', GuardianController::class)->only(['destroy']);
@@ -129,6 +140,16 @@ Route::middleware('auth')->group(function () {
     Route::post('/programs/{program}/attachments', [ProgramAttachmentController::class, 'store'])
         ->middleware('permission:edit therapy')
         ->name('attachments.store');
+    Route::middleware('permission:edit therapy')->group(function () {
+        Route::post('/programs/{program}/articulation-assessments', [ArticulationAssessmentController::class, 'store'])
+            ->name('programs.articulation-assessments.store');
+        Route::post('/programs/{program}/stuttering-assessments', [StutteringAssessmentController::class, 'store'])
+            ->name('programs.stuttering-assessments.store');
+        Route::post('/programs/{program}/progress-points', [ClinicalProgressPointController::class, 'store'])
+            ->name('programs.progress-points.store');
+        Route::post('/programs/{program}/discharge-summary', [DischargeSummaryController::class, 'store'])
+            ->name('programs.discharge-summary.store');
+    });
     Route::post('/tasks', [HomeTaskController::class, 'store'])
         ->middleware('permission:manage home tasks')
         ->name('tasks.store');

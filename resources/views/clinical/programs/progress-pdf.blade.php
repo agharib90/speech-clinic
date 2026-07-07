@@ -89,9 +89,9 @@
         <tbody>
             @foreach($program->milestones as $milestone)
             <tr>
-                <td>{{ $milestone->skill_name }}</td>
-                <td>{{ $milestone->percentage }}</td>
-                <td>{{ $milestone->measured_at->format('Y-m-d') }}</td>
+                <td>{{ $milestone->skill_area }}</td>
+                <td>{{ $milestone->current_score }}%</td>
+                <td>{{ $milestone->recorded_at->format('Y-m-d') }}</td>
             </tr>
             @endforeach
         </tbody>

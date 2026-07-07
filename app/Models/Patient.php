@@ -43,6 +43,11 @@ class Patient extends Model
         return $this->hasMany(TherapyProgram::class);
     }
 
+    public function caseHistory()
+    {
+        return $this->hasOne(CaseHistory::class);
+    }
+
     protected $appends = ['age'];
 
 public function getAgeAttribute(): string

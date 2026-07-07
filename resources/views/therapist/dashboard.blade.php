@@ -1,24 +1,40 @@
 <x-app-layout>
-    <x-slot name="title">لوحة الأخصائي — {{ Auth::user()->name }}</x-slot>
+    <x-slot name="title">لوحة الأخصائي - {{ Auth::user()->name }}</x-slot>
 
     {{-- ─── ترحيب ─────────────────────────────────────────────────────── --}}
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-                مرحباً، {{ Auth::user()->name }} 👋
+                مرحباً، {{ Auth::user()->name }}
             </h1>
             <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {{ now()->isoFormat('dddd، D MMMM YYYY') }}
             </p>
         </div>
-        <a href="{{ route('appointments.index', ['date' => today()->format('Y-m-d'), 'therapist_id' => Auth::id()]) }}"
-           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-            </svg>
-            جدول المواعيد
-        </a>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('therapist.cases') }}"
+               class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M7 4h10a2 2 0 012 2v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z"/>
+                </svg>
+                حالاتي
+            </a>
+            <a href="{{ route('appointments.index', ['date' => today()->format('Y-m-d'), 'therapist_id' => Auth::id()]) }}"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                جدول اليوم
+            </a>
+            <a href="{{ route('programs.index', ['status' => \App\Models\TherapyProgram::STATUS_ACTIVE]) }}"
+               class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7h6m-6 4h6"/>
+                </svg>
+                البرامج الجارية
+            </a>
+        </div>
     </div>
 
     {{-- ─── بطاقات الإحصائيات ───────────────────────────────────────────── --}}
@@ -217,13 +233,13 @@
 
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-6">
 
         {{-- ─── حالاتي النشطة ────────────────────────────────────────────── --}}
         <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
                 <h2 class="font-bold text-gray-900 dark:text-white">حالاتي النشطة</h2>
-                <a href="{{ route('programs.index') }}"
+                <a href="{{ route('therapist.cases') }}"
                    class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
                     عرض الكل
                 </a>
@@ -301,7 +317,7 @@
                     <svg class="w-10 h-10 text-green-300 dark:text-green-700 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
-                    <p class="text-sm text-gray-400 dark:text-gray-500">لا توجد واجبات متأخرة 🎉</p>
+                    <p class="text-sm text-gray-400 dark:text-gray-500">لا توجد واجبات متأخرة</p>
                 </div>
             @else
                 <div class="divide-y divide-gray-50 dark:divide-gray-700">
@@ -328,6 +344,47 @@
                             </div>
                         </div>
                     </div>
+                    @endforeach
+                </div>
+            @endif
+        </div>
+
+        {{-- ─── آخر تطورات الحالات ─────────────────────────────────────── --}}
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
+            <div class="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                <h2 class="font-bold text-gray-900 dark:text-white">آخر تطورات الحالات</h2>
+                <a href="{{ route('therapist.cases') }}" class="text-xs text-blue-600 dark:text-blue-400 hover:underline">حالاتي</a>
+            </div>
+
+            @if($recentProgressPoints->isEmpty())
+                <div class="px-6 py-10 text-center">
+                    <svg class="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-6a2 2 0 012-2h2a2 2 0 012 2v6m-8 0h8m-10 4h12a2 2 0 002-2V7a2 2 0 00-.586-1.414l-3-3A2 2 0 0015 2H7a2 2 0 00-2 2v15a2 2 0 002 2z"/>
+                    </svg>
+                    <p class="text-sm text-gray-400 dark:text-gray-500">لا توجد نقاط تطور مسجلة مؤخراً</p>
+                </div>
+            @else
+                <div class="divide-y divide-gray-50 dark:divide-gray-700">
+                    @foreach($recentProgressPoints as $point)
+                        <div class="px-6 py-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ $point->program->patient->name ?? 'حالة غير متاحة' }}
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                                        {{ $point->domain }} · {{ $point->program->name ?? 'برنامج غير متاح' }}
+                                    </p>
+                                    @if($point->notes)
+                                        <p class="mt-2 line-clamp-2 text-xs text-gray-500 dark:text-gray-400">{{ $point->notes }}</p>
+                                    @endif
+                                </div>
+                                <div class="flex-shrink-0 text-left">
+                                    <span class="block text-sm font-bold text-blue-600 dark:text-blue-400">{{ number_format((float) $point->score, 0) }}</span>
+                                    <span class="text-xs text-gray-400 dark:text-gray-500">{{ $point->recorded_at?->format('d/m') }}</span>
+                                </div>
+                            </div>
+                        </div>
                     @endforeach
                 </div>
             @endif

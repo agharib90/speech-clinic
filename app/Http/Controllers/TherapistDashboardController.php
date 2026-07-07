@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\ClinicalProgressPoint;
+use App\Models\SessionPackage;
 use App\Models\TherapyProgram;
-use App\Models\TherapySession;
 use App\Models\TherapistEarning;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Carbon\Carbon;
 
 class TherapistDashboardController extends Controller
 {
@@ -124,6 +125,14 @@ class TherapistDashboardController extends Controller
             ->take(5)
             ->get();
 
+        $recentProgressPoints = ClinicalProgressPoint::whereHas('program', function ($q) use ($user) {
+            $q->where('therapist_id', $user->id);
+        })
+            ->with('program.patient')
+            ->latest('recorded_at')
+            ->take(5)
+            ->get();
+
         return view('therapist.dashboard', compact(
             'todayAppointments',
             'completedToday',
@@ -134,7 +143,105 @@ class TherapistDashboardController extends Controller
             'upcomingAppointments',
             'activePrograms',
             'monthlyStats',
-            'pendingTasks'
+            'pendingTasks',
+            'recentProgressPoints'
+        ));
+    }
+
+    public function cases(Request $request)
+    {
+        $user = Auth::user();
+        $search = trim((string) $request->query('search', ''));
+        $status = $request->query('status');
+        $statusOptions = TherapyProgram::STATUS_LABELS;
+
+        $programs = TherapyProgram::query()
+            ->where('therapist_id', $user->id)
+            ->with([
+                'patient.guardian',
+                'sessions' => fn ($query) => $query->latest('session_date')->latest('id'),
+                'progressPoints',
+            ])
+            ->when(in_array($status, array_keys($statusOptions), true), function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->when($request->boolean('today'), function ($query) use ($user) {
+                $query->whereHas('patient.appointments', function ($appointments) use ($user) {
+                    $appointments
+                        ->where('therapist_id', $user->id)
+                        ->whereDate('scheduled_at', today());
+                });
+            })
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($inner) use ($search) {
+                    $inner
+                        ->where('name', 'like', "%{$search}%")
+                        ->orWhere('disorder_type', 'like', "%{$search}%")
+                        ->orWhereHas('patient', function ($patientQuery) use ($search) {
+                            $patientQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('barcode', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('patient.guardian', function ($guardianQuery) use ($search) {
+                            $guardianQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+                });
+            })
+            ->latest('updated_at')
+            ->paginate(12)
+            ->withQueryString();
+
+        $patientIds = $programs->getCollection()
+            ->pluck('patient_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $nextAppointments = Appointment::query()
+            ->whereIn('patient_id', $patientIds)
+            ->where('therapist_id', $user->id)
+            ->where('status', 'مجدول')
+            ->where('scheduled_at', '>=', now())
+            ->orderBy('scheduled_at')
+            ->get()
+            ->groupBy('patient_id')
+            ->map(fn ($appointments) => $appointments->first());
+
+        $activePackages = SessionPackage::query()
+            ->whereIn('patient_id', $patientIds)
+            ->where('status', 'نشط')
+            ->latest('created_at')
+            ->get()
+            ->groupBy('patient_id')
+            ->map(fn ($packages) => $packages->first());
+
+        $caseStats = [
+            'total' => TherapyProgram::where('therapist_id', $user->id)
+                ->distinct('patient_id')
+                ->count('patient_id'),
+            'active' => TherapyProgram::where('therapist_id', $user->id)
+                ->where('status', TherapyProgram::STATUS_ACTIVE)
+                ->count(),
+            'today' => Appointment::where('therapist_id', $user->id)
+                ->whereDate('scheduled_at', today())
+                ->distinct('patient_id')
+                ->count('patient_id'),
+            'upcoming' => Appointment::where('therapist_id', $user->id)
+                ->where('status', 'مجدول')
+                ->where('scheduled_at', '>=', now())
+                ->count(),
+        ];
+
+        return view('therapist.cases', compact(
+            'programs',
+            'statusOptions',
+            'status',
+            'search',
+            'nextAppointments',
+            'activePackages',
+            'caseStats'
         ));
     }
 }

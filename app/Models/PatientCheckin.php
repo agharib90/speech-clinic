@@ -11,6 +11,11 @@ class PatientCheckin extends Model
         'patient_id', 'appointment_id', 'checkin_at', 'checkout_at', 'checked_by', 'method'
     ];
 
+    protected $casts = [
+        'checkin_at' => 'datetime',
+        'checkout_at' => 'datetime',
+    ];
+
     public function patient()
     {
         return $this->belongsTo(Patient::class);

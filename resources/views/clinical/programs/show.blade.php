@@ -49,6 +49,70 @@
                 </form>
             </div>
 
+            @can('edit therapy')
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <h3 class="font-bold mb-3 dark:text-gray-200">نقطة تقدم زمنية</h3>
+                <form action="{{ route('programs.progress-points.store', $program) }}" method="POST">
+                    @csrf
+                    <div class="space-y-3">
+                        <input type="date" name="recorded_at" value="{{ now()->toDateString() }}" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                        <select name="domain" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                            <option value="النطق">النطق</option>
+                            <option value="اللغة الاستقبالية">اللغة الاستقبالية</option>
+                            <option value="اللغة التعبيرية">اللغة التعبيرية</option>
+                            <option value="الطلاقة">الطلاقة</option>
+                            <option value="التواصل الاجتماعي">التواصل الاجتماعي</option>
+                        </select>
+                        <input type="number" name="score" min="0" max="100" step="0.01" placeholder="الدرجة من 0 إلى 100" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                        <textarea name="notes" rows="2" placeholder="ملاحظة مختصرة" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200"></textarea>
+                        <button type="submit" class="w-full bg-emerald-600 text-white py-2 rounded">حفظ نقطة التقدم</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <h3 class="font-bold mb-3 dark:text-gray-200">مقياس شدة التأتأة</h3>
+                <form action="{{ route('programs.stuttering-assessments.store', $program) }}" method="POST">
+                    @csrf
+                    <div class="space-y-3">
+                        <input type="date" name="assessed_at" value="{{ now()->toDateString() }}" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                        <input type="text" name="sample_context" placeholder="سياق العينة: قراءة، حوار، لعب..." class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" name="syllables_count" min="0" placeholder="عدد المقاطع" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                            <input type="number" name="stuttered_syllables_count" min="0" placeholder="مقاطع متأتأة" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="number" name="duration_score" min="0" max="10" placeholder="درجة المدة 0-10" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                            <input type="number" name="physical_concomitants_score" min="0" max="10" placeholder="مصاحبات 0-10" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                        </div>
+                        <textarea name="notes" rows="2" placeholder="ملاحظات المقياس" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200"></textarea>
+                        <button type="submit" class="w-full bg-amber-600 text-white py-2 rounded">حفظ المقياس</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <h3 class="font-bold mb-3 dark:text-gray-200">ملخص خروج من البرنامج</h3>
+                <form action="{{ route('programs.discharge-summary.store', $program) }}" method="POST">
+                    @csrf
+                    <div class="space-y-3">
+                        <input type="date" name="discharge_date" value="{{ old('discharge_date', optional($program->dischargeSummary?->discharge_date)->format('Y-m-d') ?? now()->toDateString()) }}" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200" required>
+                        <input type="text" name="reason" value="{{ old('reason', $program->dischargeSummary->reason ?? '') }}" placeholder="سبب الخروج" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                        <textarea name="initial_status" rows="2" placeholder="الوضع عند بداية البرنامج" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">{{ old('initial_status', $program->dischargeSummary->initial_status ?? '') }}</textarea>
+                        <textarea name="final_status" rows="2" placeholder="الوضع عند الخروج" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">{{ old('final_status', $program->dischargeSummary->final_status ?? '') }}</textarea>
+                        <textarea name="goals_outcome" rows="2" placeholder="نتيجة الأهداف العلاجية" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">{{ old('goals_outcome', $program->dischargeSummary->goals_outcome ?? '') }}</textarea>
+                        <textarea name="recommendations" rows="2" placeholder="التوصيات المنزلية أو المدرسية" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">{{ old('recommendations', $program->dischargeSummary->recommendations ?? '') }}</textarea>
+                        <textarea name="follow_up_plan" rows="2" placeholder="خطة المتابعة" class="w-full border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">{{ old('follow_up_plan', $program->dischargeSummary->follow_up_plan ?? '') }}</textarea>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" name="mark_completed" value="1" class="rounded">
+                            <span>إغلاق البرنامج كبرنامج مكتمل</span>
+                        </label>
+                        <button type="submit" class="w-full bg-slate-700 text-white py-2 rounded">حفظ ملخص الخروج</button>
+                    </div>
+                </form>
+            </div>
+            @endcan
+
             <!-- ٢. رفع مرفق (تسجيل قبل/بعد) -->
             <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
                 <h3 class="font-bold mb-3 dark:text-gray-200">رفع مرفق (صوت/صورة/فيديو)</h3>
@@ -70,6 +134,230 @@
 
         <!-- القسم الأيسر: عرض البيانات العيادية -->
         <div class="lg:col-span-2 space-y-6">
+
+            @php
+                $progressSeries = $program->progressPoints->groupBy('domain');
+                $chartColors = ['#2563eb', '#059669', '#d97706', '#7c3aed', '#dc2626'];
+                $latestArticulation = $program->articulationAssessments->first();
+                $latestStuttering = $program->stutteringAssessments->first();
+            @endphp
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+                    <h3 class="font-bold dark:text-gray-200">ملخص تاريخ الحالة</h3>
+                    <a href="{{ route('patients.show', $program->patient) }}" class="text-sm text-blue-600 hover:underline">فتح ملف المريض</a>
+                </div>
+                @if($program->patient->caseHistory)
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-300">
+                        <p><span class="font-bold">الشكوى:</span> {{ $program->patient->caseHistory->main_concerns ?: 'غير مسجلة' }}</p>
+                        <p><span class="font-bold">المراحل التطورية:</span> {{ $program->patient->caseHistory->developmental_milestones ?: 'غير مسجلة' }}</p>
+                        <p><span class="font-bold">السمع والبصر:</span> {{ $program->patient->caseHistory->hearing_vision_notes ?: 'غير مسجلة' }}</p>
+                        <p><span class="font-bold">تدخلات سابقة:</span> {{ $program->patient->caseHistory->previous_interventions ?: 'غير مسجلة' }}</p>
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500">لا يوجد تاريخ حالة مسجل لهذا المريض بعد.</p>
+                @endif
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <h3 class="font-bold mb-4 dark:text-gray-200">رسم التقدم عبر الوقت</h3>
+                @if($progressSeries->count())
+                    <div class="space-y-5">
+                        @foreach($progressSeries as $domain => $points)
+                            @php
+                                $points = $points->values();
+                                $plotPoints = $points->map(function ($point, $index) use ($points) {
+                                    $x = $points->count() === 1 ? 50 : round(($index / max($points->count() - 1, 1)) * 100, 2);
+                                    $y = round(100 - (float) $point->score, 2);
+
+                                    return "{$x},{$y}";
+                                })->implode(' ');
+                                $color = $chartColors[$loop->index % count($chartColors)];
+                            @endphp
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-sm font-bold text-gray-700 dark:text-gray-300">{{ $domain }}</h4>
+                                    <span class="text-xs text-gray-500">{{ $points->last()->score }}%</span>
+                                </div>
+                                <div class="h-36 border border-gray-200 dark:border-gray-700 rounded bg-gray-50 dark:bg-gray-900 p-3">
+                                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="w-full h-full">
+                                        <line x1="0" y1="25" x2="100" y2="25" stroke="#e5e7eb" stroke-width="0.7" />
+                                        <line x1="0" y1="50" x2="100" y2="50" stroke="#e5e7eb" stroke-width="0.7" />
+                                        <line x1="0" y1="75" x2="100" y2="75" stroke="#e5e7eb" stroke-width="0.7" />
+                                        <polyline points="{{ $plotPoints }}" fill="none" stroke="{{ $color }}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+                                        @foreach($points as $pointIndex => $point)
+                                            @php
+                                                $x = $points->count() === 1 ? 50 : round(($pointIndex / max($points->count() - 1, 1)) * 100, 2);
+                                                $y = round(100 - (float) $point->score, 2);
+                                            @endphp
+                                            <circle cx="{{ $x }}" cy="{{ $y }}" r="2.1" fill="{{ $color }}" />
+                                        @endforeach
+                                    </svg>
+                                </div>
+                                <div class="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+                                    @foreach($points as $point)
+                                        <span>{{ $point->recorded_at->format('Y-m-d') }}: {{ $point->score }}%</span>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-gray-500 text-sm">لا توجد نقاط تقدم زمنية بعد.</p>
+                @endif
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-4">
+                    <h3 class="font-bold dark:text-gray-200">بنك اختبار النطق العربي</h3>
+                    @if($latestArticulation)
+                        <span class="text-xs px-3 py-1 rounded-full bg-blue-100 text-blue-700">
+                            آخر دقة: {{ $latestArticulation->accuracy_percent }}%
+                        </span>
+                    @endif
+                </div>
+
+                @can('edit therapy')
+                <details class="mb-5">
+                    <summary class="cursor-pointer text-sm text-blue-600 font-semibold">تسجيل اختبار جديد</summary>
+                    <form action="{{ route('programs.articulation-assessments.store', $program) }}" method="POST" class="mt-4 space-y-4">
+                        @csrf
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <input type="date" name="assessed_at" value="{{ now()->toDateString() }}" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                            <input type="text" name="title" value="اختبار النطق العربي" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                            <input type="text" name="notes" placeholder="ملاحظة عامة" class="border rounded px-3 py-2 dark:bg-gray-700 dark:text-gray-200">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm">
+                                <thead class="text-gray-600 dark:text-gray-300">
+                                    <tr>
+                                        <th class="text-right py-2">الصوت</th>
+                                        <th class="text-right py-2">كلمة الاختبار</th>
+                                        <th class="text-right py-2">الأداء</th>
+                                        <th class="text-right py-2">الإبدال</th>
+                                        <th class="text-right py-2">ملاحظة</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y dark:divide-gray-700">
+                                    @foreach($soundBank as $index => $item)
+                                        <tr>
+                                            <td class="py-2 font-bold dark:text-gray-200">
+                                                {{ $item['sound'] }}
+                                                <input type="hidden" name="responses[{{ $index }}][sound]" value="{{ $item['sound'] }}">
+                                                <input type="hidden" name="responses[{{ $index }}][position]" value="{{ $item['position'] }}">
+                                                <input type="hidden" name="responses[{{ $index }}][prompt_word]" value="{{ $item['prompt_word'] }}">
+                                            </td>
+                                            <td class="py-2 dark:text-gray-300">{{ $item['prompt_word'] }}</td>
+                                            <td class="py-2">
+                                                <select name="responses[{{ $index }}][status]" class="border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200" required>
+                                                    @foreach($articulationStatusLabels as $status => $label)
+                                                        <option value="{{ $status }}">{{ $label }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td class="py-2">
+                                                <input type="text" name="responses[{{ $index }}][substitution]" class="w-24 border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
+                                            </td>
+                                            <td class="py-2">
+                                                <input type="text" name="responses[{{ $index }}][notes]" class="w-36 border rounded px-2 py-1 dark:bg-gray-700 dark:text-gray-200">
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded">حفظ اختبار النطق</button>
+                    </form>
+                </details>
+                @endcan
+
+                @if($latestArticulation)
+                    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4 text-center">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">الإجمالي</p>
+                            <p class="font-bold dark:text-white">{{ $latestArticulation->total_items }}</p>
+                        </div>
+                        <div class="bg-green-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">صحيح</p>
+                            <p class="font-bold text-green-700">{{ $latestArticulation->correct_count }}</p>
+                        </div>
+                        <div class="bg-yellow-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">مبدل</p>
+                            <p class="font-bold text-yellow-700">{{ $latestArticulation->substitution_count }}</p>
+                        </div>
+                        <div class="bg-red-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">محذوف</p>
+                            <p class="font-bold text-red-700">{{ $latestArticulation->omission_count }}</p>
+                        </div>
+                        <div class="bg-purple-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">مشوه</p>
+                            <p class="font-bold text-purple-700">{{ $latestArticulation->distortion_count }}</p>
+                        </div>
+                    </div>
+                    @php
+                        $articulationErrors = collect($latestArticulation->responses)
+                            ->reject(fn ($response) => ($response['status'] ?? null) === 'correct')
+                            ->values();
+                    @endphp
+                    @if($articulationErrors->count())
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                            <h4 class="font-bold mb-2">الأصوات التي تحتاج متابعة</h4>
+                            <div class="flex flex-wrap gap-2">
+                                @foreach($articulationErrors as $response)
+                                    <span class="px-2 py-1 rounded bg-gray-100 dark:bg-gray-700">
+                                        {{ $response['sound'] }}: {{ $articulationStatusLabels[$response['status']] ?? $response['status'] }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @else
+                    <p class="text-gray-500 text-sm">لم يتم تسجيل اختبار نطق بعد.</p>
+                @endif
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                <h3 class="font-bold mb-4 dark:text-gray-200">آخر قياس للتأتأة</h3>
+                @if($latestStuttering)
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">النسبة</p>
+                            <p class="font-bold dark:text-white">{{ $latestStuttering->stuttering_percentage }}%</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">درجة التكرار</p>
+                            <p class="font-bold dark:text-white">{{ $latestStuttering->frequency_score }}</p>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">الدرجة الكلية</p>
+                            <p class="font-bold dark:text-white">{{ $latestStuttering->total_score }}</p>
+                        </div>
+                        <div class="bg-amber-50 dark:bg-gray-700 rounded p-3">
+                            <p class="text-xs text-gray-500 dark:text-gray-300">الشدة</p>
+                            <p class="font-bold text-amber-700">{{ $latestStuttering->severity }}</p>
+                        </div>
+                    </div>
+                @else
+                    <p class="text-gray-500 text-sm">لم يتم تسجيل مقياس تأتأة بعد.</p>
+                @endif
+            </div>
+
+            @if($program->dischargeSummary)
+                <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">
+                    <div class="flex items-center justify-between gap-3 mb-4">
+                        <h3 class="font-bold dark:text-gray-200">ملخص الخروج</h3>
+                        <span class="text-xs px-3 py-1 rounded-full bg-slate-100 text-slate-700">
+                            {{ $program->dischargeSummary->discharge_date->format('Y-m-d') }}
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-300">
+                        <p><span class="font-bold">السبب:</span> {{ $program->dischargeSummary->reason ?: 'غير محدد' }}</p>
+                        <p><span class="font-bold">نتيجة الأهداف:</span> {{ $program->dischargeSummary->goals_outcome ?: 'غير مسجلة' }}</p>
+                        <p><span class="font-bold">الوضع النهائي:</span> {{ $program->dischargeSummary->final_status ?: 'غير مسجل' }}</p>
+                        <p><span class="font-bold">خطة المتابعة:</span> {{ $program->dischargeSummary->follow_up_plan ?: 'غير مسجلة' }}</p>
+                    </div>
+                </div>
+            @endif
 
             <!-- عرض التطور (رسم بياني بصري مبسط) -->
             <div class="bg-white dark:bg-gray-800 p-5 rounded-lg shadow">

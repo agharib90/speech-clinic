@@ -2,65 +2,99 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ArticulationAssessment;
 use App\Models\TherapyProgram;
-use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-
-
-
+use Illuminate\Http\Request;
 
 class TherapyProgramController extends Controller
 {
     use AuthorizesRequests;
-    public function index()
+
+    public function index(Request $request)
     {
         $this->authorize('viewAny', TherapyProgram::class);
 
-        // جلب البرامج النشطة فقط
-        $programs = TherapyProgram::with('patient', 'therapist')
-            ->where('status', 'جاري')
+        $status = $request->input('status', 'all');
+        $search = $request->input('search');
+
+        $baseQuery = TherapyProgram::query()
             ->when(auth()->user()->hasRole('أخصائي تخاطب'), function ($query) {
                 $query->where('therapist_id', auth()->id());
+            });
+
+        $statusCounts = (clone $baseQuery)
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $programs = (clone $baseQuery)
+            ->with(['patient', 'therapist', 'progressPoints'])
+            ->withCount(['sessions', 'progressPoints', 'articulationAssessments', 'stutteringAssessments'])
+            ->when($status !== 'all', function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($innerQuery) use ($search) {
+                    $innerQuery->where('name', 'like', "%{$search}%")
+                        ->orWhere('disorder_type', 'like', "%{$search}%")
+                        ->orWhereHas('patient', function ($patientQuery) use ($search) {
+                            $patientQuery->where('name', 'like', "%{$search}%");
+                        })
+                        ->orWhereHas('therapist', function ($therapistQuery) use ($search) {
+                            $therapistQuery->where('name', 'like', "%{$search}%");
+                        });
+                });
             })
             ->latest()
-            ->get();
+            ->paginate(12)
+            ->withQueryString();
 
-        return view('clinical.programs.index', compact('programs'));
+        $statusLabels = ['all' => 'كل البرامج'] + TherapyProgram::STATUS_LABELS;
+
+        return view('clinical.programs.index', compact('programs', 'status', 'search', 'statusCounts', 'statusLabels'));
     }
 
     public function show(TherapyProgram $program)
     {
         $this->authorize('view', $program);
 
-        // تحميل كل البيانات العيادية المرتبطة بالبرنامج
-        $program->load('patient', 'therapist', 'sessions.homeTasks', 'milestones', 'attachments');
-        return view('clinical.programs.show', compact('program'));
+        $program->load([
+            'patient.caseHistory',
+            'therapist',
+            'sessions.homeTasks',
+            'milestones',
+            'attachments',
+            'articulationAssessments.assessedBy',
+            'stutteringAssessments.assessedBy',
+            'progressPoints.recordedBy',
+            'dischargeSummary.preparedBy',
+        ]);
+
+        $soundBank = ArticulationAssessment::soundBank();
+        $articulationStatusLabels = ArticulationAssessment::STATUS_LABELS;
+
+        return view('clinical.programs.show', compact('program', 'soundBank', 'articulationStatusLabels'));
     }
 
     public function progressReport(TherapyProgram $program)
-{
-    // ١. التحقق من الصلاحية (أن المستخدم يملك حق رؤية هذا البرنامج)
-    // سنقوم بإنشاء Policy لاحقاً باسم TherapyProgramPolicy
-    $this->authorize('view', $program);
+    {
+        $this->authorize('view', $program);
 
-    // ٢. تحميل العلاقات المطلوبة للتقرير بشكل كامل
-     $program->load([
-    'milestones',
-    'sessions',
-    'patient.guardian',
-    'therapist' // <--- تم التعديل هنا (أزلنا .user)
-]);
+        $program->load([
+            'milestones',
+            'sessions',
+            'patient.guardian',
+            'therapist',
+        ]);
 
-    // ٣. إعدادات DomPDF لدعم RTL والصور
-    $pdf = Pdf::loadView('clinical.programs.progress-pdf', compact('program'))
-        ->setOption('isHtml5ParserEnabled', true)
-        ->setOption('isRemoteEnabled', true); // لتمكين تحميل الشعار (Logo) إن وجد
+        $pdf = Pdf::loadView('clinical.programs.progress-pdf', compact('program'))
+            ->setOption('isHtml5ParserEnabled', true)
+            ->setOption('isRemoteEnabled', true);
 
-    // ٤. تجهيز اسم الملف (تجنب مشاكل الأسماء العربية قدر الإمكان بإضافة التاريخ)
-    $fileName = "تقرير_تطور_{$program->patient->name}_" . now()->format('Y-m-d') . ".pdf";
+        $fileName = "تقرير_تطور_{$program->patient->name}_" . now()->format('Y-m-d') . '.pdf';
 
-    return $pdf->download($fileName);
-}
-
+        return $pdf->download($fileName);
+    }
 }

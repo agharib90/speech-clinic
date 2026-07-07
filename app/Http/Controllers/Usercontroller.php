@@ -174,6 +174,10 @@ class UserController extends Controller
 
     public function resetPassword(User $user)
     {
+        if ($user->hasRole('مدير النظام')) {
+            return back()->with('error', 'لا يمكن إعادة ضبط كلمة مرور مدير النظام من هذه الشاشة.');
+        }
+
         $temporaryPassword = 'Temp-' . Str::random(10);
 
         DB::transaction(function () use ($user, $temporaryPassword) {

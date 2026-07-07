@@ -15,8 +15,16 @@ class SupplierController extends Controller
 
     public function store(Request $request)
     {
-        $request->validate(['name' => 'required', 'phone' => 'nullable']);
-        Supplier::create($request->all());
+        $data = $request->validate([
+            'name' => 'required|string',
+            'phone' => 'nullable|string',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'balance' => 'nullable|numeric',
+            'notes' => 'nullable|string',
+        ]);
+
+        Supplier::create($data);
         return back()->with('success', 'تم إضافة المورد');
     }
 }

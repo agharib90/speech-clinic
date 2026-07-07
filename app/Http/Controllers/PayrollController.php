@@ -20,7 +20,7 @@ class PayrollController extends Controller
     // حساب وتوليد تقرير الراتب
     public function calculate(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'therapist_id' => 'required|exists:therapists,id',
             'month' => 'required|integer|min:1|max:12',
             'year' => 'required|integer',
@@ -86,7 +86,7 @@ class PayrollController extends Controller
             'year' => 'required|integer',
         ]);
 
-        PayrollRecord::create($request->all());
+        PayrollRecord::create($data);
 
         return back()->with('success', 'تم إضافة الـ ' . $request->type . ' بنجاح');
     }

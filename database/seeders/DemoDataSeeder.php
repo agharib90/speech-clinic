@@ -3,7 +3,11 @@
 namespace Database\Seeders;
 
 use App\Models\Appointment;
+use App\Models\ArticulationAssessment;
 use App\Models\Attendance;
+use App\Models\CaseHistory;
+use App\Models\ClinicalProgressPoint;
+use App\Models\DischargeSummary;
 use App\Models\Equipment;
 use App\Models\Guardian;
 use App\Models\HomeTask;
@@ -23,6 +27,7 @@ use App\Models\SessionMilestone;
 use App\Models\SessionPackage;
 use App\Models\SessionType;
 use App\Models\Setting;
+use App\Models\StutteringAssessment;
 use App\Models\Supplier;
 use App\Models\SupplierPayment;
 use App\Models\Therapist;
@@ -188,6 +193,7 @@ class DemoDataSeeder extends Seeder
         $appointments = $this->seedAppointments($patients, $saraUser, $omarUser, $sessionTypes);
         $sessions = $this->seedSessions($programs, $appointments, $sessionTypes);
 
+        $this->seedClinicalTools($patients, $programs, $saraUser, $omarUser);
         $this->seedCheckins($patients, $appointments, $reception);
         $this->seedProgressAndTasks($programs, $sessions);
         $this->seedPackages($patients, $sessions);
@@ -455,6 +461,185 @@ class DemoDataSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    private function seedClinicalTools(array $patients, array $programs, User $saraUser, User $omarUser): void
+    {
+        $histories = [
+            'PAT-DEMO-001' => [
+                'taken_by' => $saraUser->id,
+                'taken_at' => now()->subWeeks(6)->toDateString(),
+                'main_concerns' => 'تأخر في استخدام الجمل وطلب الأشياء غالبا بالإشارة.',
+                'prenatal_history' => 'حمل مستقر دون مضاعفات مؤثرة.',
+                'birth_history' => 'ولادة طبيعية في موعدها.',
+                'developmental_milestones' => 'المشي في العمر المتوقع، بداية الكلمات متأخرة نسبيا.',
+                'medical_history' => 'لا توجد أمراض مزمنة مسجلة.',
+                'hearing_vision_notes' => 'فحص السمع الأخير داخل الحدود الطبيعية حسب ولي الأمر.',
+                'family_history' => 'لا توجد حالات مشابهة واضحة في الأسرة.',
+                'language_environment' => 'يتعرض للعربية العامية في المنزل مع وقت شاشة متوسط.',
+                'previous_interventions' => 'تدريبات منزلية غير منتظمة قبل الالتحاق بالمركز.',
+                'notes' => 'استجابة جيدة للتعزيز البصري واللعب المنظم.',
+            ],
+            'PAT-DEMO-002' => [
+                'taken_by' => $saraUser->id,
+                'taken_at' => now()->subWeeks(4)->toDateString(),
+                'main_concerns' => 'صعوبة واضحة في صوت الراء داخل الكلمات والجمل.',
+                'prenatal_history' => 'لا توجد ملاحظات مؤثرة.',
+                'birth_history' => 'ولادة قيصرية دون احتياج حضانة.',
+                'developmental_milestones' => 'تطور لغوي عام مناسب مع خطأ نطقي محدد.',
+                'medical_history' => 'لا توجد عمليات أو إصابات مسجلة.',
+                'hearing_vision_notes' => 'لا توجد شكاوى سمعية أو بصرية.',
+                'family_history' => 'وجود لثغة مشابهة لدى أحد الأقارب في الطفولة.',
+                'language_environment' => 'لغة عربية في المنزل والمدرسة.',
+                'previous_interventions' => 'لا توجد جلسات سابقة منتظمة.',
+                'notes' => 'دافعية جيدة أمام المرآة وبطاقات الكلمات.',
+            ],
+            'PAT-DEMO-003' => [
+                'taken_by' => $omarUser->id,
+                'taken_at' => now()->subWeeks(3)->toDateString(),
+                'main_concerns' => 'أخطاء نطق متعددة تؤثر على وضوح الكلام.',
+                'prenatal_history' => 'الحمل مستقر حسب التاريخ المأخوذ.',
+                'birth_history' => 'لا توجد مضاعفات ولادة مذكورة.',
+                'developmental_milestones' => 'اكتساب الكلمات كان متأخرا بدرجة بسيطة.',
+                'medical_history' => 'التهابات أذن متكررة سابقا حسب ولي الأمر.',
+                'hearing_vision_notes' => 'يوصى بمتابعة السمع إذا استمرت أخطاء التمييز.',
+                'family_history' => 'لا توجد حالات معروفة.',
+                'language_environment' => 'يتواصل بالعربية في المنزل ويتعرض لمحتوى أطفال يوميا.',
+                'previous_interventions' => 'جلسات قصيرة غير مكتملة في مركز آخر.',
+                'notes' => 'يحتاج فواصل انتباه قصيرة أثناء الاختبارات.',
+            ],
+        ];
+
+        foreach ($histories as $barcode => $history) {
+            CaseHistory::updateOrCreate(
+                ['patient_id' => $patients[$barcode]->id],
+                $history
+            );
+        }
+
+        $progressRows = [
+            ['program' => 'PAT-DEMO-001', 'domain' => 'اللغة التعبيرية', 'days' => 35, 'score' => 25, 'notes' => 'خط أساس عند بدء البرنامج.'],
+            ['program' => 'PAT-DEMO-001', 'domain' => 'اللغة التعبيرية', 'days' => 21, 'score' => 42, 'notes' => 'تحسن في الطلب اللفظي.'],
+            ['program' => 'PAT-DEMO-001', 'domain' => 'اللغة التعبيرية', 'days' => 7, 'score' => 58, 'notes' => 'بداية استخدام جمل قصيرة.'],
+            ['program' => 'PAT-DEMO-002', 'domain' => 'النطق', 'days' => 28, 'score' => 10, 'notes' => 'خط أساس لصوت الراء.'],
+            ['program' => 'PAT-DEMO-002', 'domain' => 'النطق', 'days' => 14, 'score' => 38, 'notes' => 'إنتاج أفضل في المقاطع.'],
+            ['program' => 'PAT-DEMO-002', 'domain' => 'النطق', 'days' => 2, 'score' => 62, 'notes' => 'تحسن في الكلمات المفردة.'],
+            ['program' => 'PAT-DEMO-003', 'domain' => 'الطلاقة', 'days' => 18, 'score' => 40, 'notes' => 'بداية متابعة الطلاقة.'],
+            ['program' => 'PAT-DEMO-003', 'domain' => 'الطلاقة', 'days' => 5, 'score' => 55, 'notes' => 'تحسن مع تنظيم معدل الكلام.'],
+        ];
+
+        foreach ($progressRows as $row) {
+            ClinicalProgressPoint::updateOrCreate(
+                [
+                    'therapy_program_id' => $programs[$row['program']]->id,
+                    'domain' => $row['domain'],
+                    'recorded_at' => now()->subDays($row['days'])->toDateString(),
+                ],
+                [
+                    'recorded_by' => $programs[$row['program']]->therapist_id,
+                    'score' => $row['score'],
+                    'notes' => $row['notes'],
+                ]
+            );
+        }
+
+        $articulationResponses = collect(ArticulationAssessment::soundBank())
+            ->map(function (array $item) {
+                $status = match ($item['sound']) {
+                    'ر' => ArticulationAssessment::STATUS_SUBSTITUTED,
+                    'س' => ArticulationAssessment::STATUS_DISTORTED,
+                    'ق' => ArticulationAssessment::STATUS_OMITTED,
+                    default => ArticulationAssessment::STATUS_CORRECT,
+                };
+
+                return $item + [
+                    'status' => $status,
+                    'substitution' => $item['sound'] === 'ر' ? 'ل' : null,
+                    'notes' => $status === ArticulationAssessment::STATUS_CORRECT ? null : 'يحتاج تدريب داخل كلمات متعددة.',
+                ];
+            })
+            ->values()
+            ->all();
+
+        $this->upsertArticulationAssessment(
+            $programs['PAT-DEMO-002'],
+            $saraUser,
+            now()->subDays(6)->toDateString(),
+            $articulationResponses,
+            'اختبار النطق العربي - خط أساس',
+            'تظهر صعوبة رئيسية في الراء مع أخطاء أقل في السين والقاف.'
+        );
+
+        $percentage = round((16 / 240) * 100, 2);
+        $frequencyScore = StutteringAssessment::frequencyScore($percentage);
+        $totalScore = $frequencyScore + 5 + 3;
+
+        StutteringAssessment::updateOrCreate(
+            [
+                'therapy_program_id' => $programs['PAT-DEMO-003']->id,
+                'assessed_at' => now()->subDays(4)->toDateString(),
+            ],
+            [
+                'assessed_by' => $omarUser->id,
+                'sample_context' => 'حوار حر لمدة خمس دقائق',
+                'syllables_count' => 240,
+                'stuttered_syllables_count' => 16,
+                'stuttering_percentage' => $percentage,
+                'frequency_score' => $frequencyScore,
+                'duration_score' => 5,
+                'physical_concomitants_score' => 3,
+                'total_score' => $totalScore,
+                'severity' => StutteringAssessment::severityForTotal($totalScore),
+                'notes' => 'تزداد التأتأة مع الأسئلة المفتوحة وتقل مع النمذجة البطيئة.',
+            ]
+        );
+
+        DischargeSummary::updateOrCreate(
+            ['therapy_program_id' => $programs['PAT-DEMO-004']->id],
+            [
+                'prepared_by' => $omarUser->id,
+                'discharge_date' => now()->subDays(1)->toDateString(),
+                'reason' => 'تحقق أهداف المرحلة الأولى',
+                'initial_status' => 'تواصل بصري محدود واستجابة ضعيفة للمبادرة الاجتماعية.',
+                'final_status' => 'زيادة واضحة في المبادرة وتقليد الأصوات والحركات.',
+                'goals_outcome' => 'تم تحقيق معظم أهداف التواصل الاجتماعي المبكر.',
+                'recommendations' => 'استمرار اللعب التبادلي اليومي وتقليل وقت الشاشة.',
+                'follow_up_plan' => 'مراجعة متابعة بعد شهر لتحديد احتياج مرحلة جديدة.',
+                'notes' => 'يمكن إعادة فتح برنامج جديد إذا ظهرت أهداف لغوية أعلى.',
+            ]
+        );
+    }
+
+    private function upsertArticulationAssessment(
+        TherapyProgram $program,
+        User $user,
+        string $assessedAt,
+        array $responses,
+        string $title,
+        ?string $notes = null
+    ): void {
+        $counts = collect($responses)->countBy('status');
+        $total = count($responses);
+        $correct = (int) $counts->get(ArticulationAssessment::STATUS_CORRECT, 0);
+
+        ArticulationAssessment::updateOrCreate(
+            [
+                'therapy_program_id' => $program->id,
+                'assessed_at' => $assessedAt,
+                'title' => $title,
+            ],
+            [
+                'assessed_by' => $user->id,
+                'responses' => $responses,
+                'total_items' => $total,
+                'correct_count' => $correct,
+                'substitution_count' => (int) $counts->get(ArticulationAssessment::STATUS_SUBSTITUTED, 0),
+                'omission_count' => (int) $counts->get(ArticulationAssessment::STATUS_OMITTED, 0),
+                'distortion_count' => (int) $counts->get(ArticulationAssessment::STATUS_DISTORTED, 0),
+                'accuracy_percent' => $total > 0 ? round(($correct / $total) * 100, 2) : 0,
+                'notes' => $notes,
+            ]
+        );
     }
 
     private function seedPackages(array $patients, array $sessions): void

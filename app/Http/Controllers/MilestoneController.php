@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\TherapyProgram;
 use App\Models\SessionMilestone;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 
 class MilestoneController extends Controller
 {
+    use AuthorizesRequests;
+
     public function store(Request $request, TherapyProgram $program)
     {
+        $this->authorize('view', $program);
+
         $request->validate([
             'skill_area' => 'required|string',
             'baseline_score' => 'required|numeric|min:0|max:100',

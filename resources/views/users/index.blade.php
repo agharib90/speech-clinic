@@ -153,18 +153,20 @@
                                 </svg>
                             </a>
 
-                            <form action="{{ route('users.reset-password', $user) }}" method="POST"
-                                  onsubmit="return confirm('هل تريد إعادة ضبط كلمة مرور هذا الحساب؟')">
-                                @csrf
-                                <button type="submit"
-                                        class="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
-                                        title="إعادة ضبط كلمة المرور">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586l6.257-6.257A6 6 0 1121 9z"/>
-                                    </svg>
-                                </button>
-                            </form>
+                            @if(! $user->hasRole('مدير النظام'))
+                                <form action="{{ route('users.reset-password', $user) }}" method="POST"
+                                      onsubmit="return confirm('هل تريد إعادة ضبط كلمة مرور هذا الحساب؟')">
+                                    @csrf
+                                    <button type="submit"
+                                            class="p-1.5 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition"
+                                            title="إعادة ضبط كلمة المرور">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                  d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586l6.257-6.257A6 6 0 1121 9z"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                            @endif
 
                             {{-- تعطيل/تفعيل (للأخصائيين فقط) --}}
                             @if($therapist && $user->id !== auth()->id())

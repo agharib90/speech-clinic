@@ -11,10 +11,14 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        $user = auth()->user();
+
         // لو الـ user أخصائي تخاطب، وجّهه للوحة الخاصة بيه
-        if (auth()->user()->hasRole('أخصائي تخاطب')) {
+        if ($user->hasRole('أخصائي تخاطب')) {
             return redirect()->route('therapist.dashboard');
         }
+
+        abort_unless($user->can('view reports'), 403);
 
 
         // ١. إحصائيات اليوم

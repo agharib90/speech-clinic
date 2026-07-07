@@ -9,6 +9,16 @@ class TherapyProgram extends Model
 {
     use SoftDeletes;
 
+    public const STATUS_ACTIVE = 'جاري';
+    public const STATUS_COMPLETED = 'مكتمل';
+    public const STATUS_STOPPED = 'متوقف';
+
+    public const STATUS_LABELS = [
+        self::STATUS_ACTIVE => 'جاري',
+        self::STATUS_COMPLETED => 'مكتمل',
+        self::STATUS_STOPPED => 'متوقف',
+    ];
+
     protected $fillable = [
         'name', 'patient_id', 'therapist_id', 'disorder_type', 'goals',
         'status', 'start_date', 'end_date', 'sessions_per_week', 'session_price', 'notes'
@@ -37,5 +47,25 @@ class TherapyProgram extends Model
     public function attachments()
     {
         return $this->hasMany(ProgramAttachment::class, 'therapy_program_id');
+    }
+
+    public function articulationAssessments()
+    {
+        return $this->hasMany(ArticulationAssessment::class)->latest('assessed_at');
+    }
+
+    public function stutteringAssessments()
+    {
+        return $this->hasMany(StutteringAssessment::class)->latest('assessed_at');
+    }
+
+    public function progressPoints()
+    {
+        return $this->hasMany(ClinicalProgressPoint::class)->orderBy('recorded_at');
+    }
+
+    public function dischargeSummary()
+    {
+        return $this->hasOne(DischargeSummary::class);
     }
 }

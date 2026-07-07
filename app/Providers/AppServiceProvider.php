@@ -7,7 +7,9 @@ use App\Models\TherapyProgram;
 use App\Policies\TherapyProgramPolicy;
 use App\Models\Setting;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\View;
+use Throwable;
 
 
 
@@ -30,7 +32,19 @@ class AppServiceProvider extends ServiceProvider
 
         // مشاركة إعدادات العيادة مع جميع الـ Views
         View::composer('*', function ($view) {
-            $settings = Setting::first();
+            static $settingsLoaded = false;
+            static $settings = null;
+
+            if (! $settingsLoaded) {
+                $settingsLoaded = true;
+
+                try {
+                    $settings = Schema::hasTable('settings') ? Setting::first() : null;
+                } catch (Throwable) {
+                    $settings = null;
+                }
+            }
+
             $view->with('settings', $settings);
         });
     }

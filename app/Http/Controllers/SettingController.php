@@ -20,13 +20,13 @@ class SettingController extends Controller
 
     public function update(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'clinic_name' => 'required|string',
             'currency' => 'required|string|max:10',
         ]);
 
         $settings = Setting::firstOrCreate(['id' => 1]);
-        $settings->update($request->all());
+        $settings->update($data);
 
         return back()->with('success', 'تم حفظ الإعدادات بنجاح');
     }
