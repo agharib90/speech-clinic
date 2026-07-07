@@ -2,10 +2,16 @@
     <x-slot name="title">فاتورة رقم: {{ $invoice->invoice_number }}</x-slot>
 
     <div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-lg shadow mb-6">
-        <div class="flex justify-between items-start mb-8">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">فاتورة: {{ $invoice->invoice_number }}</h2>
-                <p class="text-gray-500 dark:text-gray-400">المريض: {{ $invoice->patient->name }}</p>
+        <div class="flex justify-between items-start gap-4 mb-8">
+            <div class="flex items-start gap-3">
+                @if($settings?->logo_path)
+                    <img src="{{ \Illuminate\Support\Facades\Storage::url($settings->logo_path) }}" alt="شعار العيادة" class="h-14 w-14 rounded-lg object-contain bg-gray-50 dark:bg-gray-700">
+                @endif
+                <div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">{{ $settings->clinic_name ?? 'عيادة التخاطب' }}</p>
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">فاتورة: {{ $invoice->invoice_number }}</h2>
+                    <p class="text-gray-500 dark:text-gray-400">المريض: {{ $invoice->patient->name }}</p>
+                </div>
             </div>
             <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg dark:bg-purple-500 dark:hover:bg-purple-600">تحميل PDF</a>
         </div>

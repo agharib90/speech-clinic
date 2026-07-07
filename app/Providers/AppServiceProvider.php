@@ -35,7 +35,12 @@ class AppServiceProvider extends ServiceProvider
             static $settingsLoaded = false;
             static $settings = null;
 
-            if (! $settingsLoaded) {
+            $viewData = $view->getData();
+            if (array_key_exists('settings', $viewData) && $viewData['settings']) {
+                return;
+            }
+
+            if (! $settingsLoaded || $settings === null) {
                 $settingsLoaded = true;
 
                 try {

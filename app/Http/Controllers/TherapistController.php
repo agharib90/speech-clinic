@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Attendance;
 use App\Models\Appointment;
+use App\Models\Setting;
 use App\Models\Therapist;
 use App\Models\TherapyProgram;
 use Illuminate\Http\Request;
@@ -71,9 +72,13 @@ class TherapistController extends Controller
             'salary_type' => 'required|in:monthly,daily,commission',
             'monthly_salary' => 'nullable|numeric',
             'daily_salary' => 'nullable|numeric',
-            'commission_rate' => 'nullable|numeric',
+            'commission_rate' => 'nullable|numeric|min:0|max:100',
             'is_active' => 'nullable|boolean',
         ]);
+
+        if (! array_key_exists('commission_rate', $data) || $data['commission_rate'] === null) {
+            $data['commission_rate'] = (float) (Setting::first()?->default_therapist_commission_rate ?? 0);
+        }
 
         Therapist::create($data);
 

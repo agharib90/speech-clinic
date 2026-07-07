@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Therapist;
+use App\Models\Setting;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -59,6 +60,10 @@ class UserController extends Controller
 
         // ٣. لو الدور أخصائي تخاطب — أنشئ سجل Therapist وربطه بالـ User
         if ($request->role === 'أخصائي تخاطب') {
+            $commissionRate = $request->filled('commission_rate')
+                ? $request->commission_rate
+                : $this->defaultTherapistCommissionRate();
+
             Therapist::create([
                 'user_id'         => $user->id,
                 'name'            => $request->name,
@@ -70,7 +75,7 @@ class UserController extends Controller
                 'salary_type'     => $request->salary_type ?? 'monthly',
                 'monthly_salary'  => $request->monthly_salary ?? 0,
                 'daily_salary'    => $request->daily_salary ?? 0,
-                'commission_rate' => $request->commission_rate ?? 0,
+                'commission_rate' => $commissionRate,
                 'is_active'       => true,
             ]);
         }
@@ -118,6 +123,11 @@ class UserController extends Controller
 
         // تحديث سجل الأخصائي لو موجود أو إنشاؤه
         if ($request->role === 'أخصائي تخاطب') {
+            $existingTherapist = Therapist::where('user_id', $user->id)->first();
+            $commissionRate = $request->filled('commission_rate')
+                ? $request->commission_rate
+                : ($existingTherapist?->commission_rate ?? $this->defaultTherapistCommissionRate());
+
             Therapist::updateOrCreate(
                 ['user_id' => $user->id],
                 [
@@ -130,7 +140,7 @@ class UserController extends Controller
                     'salary_type'     => $request->salary_type ?? 'monthly',
                     'monthly_salary'  => $request->monthly_salary ?? 0,
                     'daily_salary'    => $request->daily_salary ?? 0,
-                    'commission_rate' => $request->commission_rate ?? 0,
+                    'commission_rate' => $commissionRate,
                 ]
             );
         }
@@ -193,5 +203,10 @@ class UserController extends Controller
             ->with('success', "تم إعادة ضبط كلمة مرور {$user->name} بنجاح")
             ->with('temporary_password', $temporaryPassword)
             ->with('reset_user_email', $user->email);
+    }
+
+    private function defaultTherapistCommissionRate(): float
+    {
+        return (float) (Setting::first()?->default_therapist_commission_rate ?? 0);
     }
 }

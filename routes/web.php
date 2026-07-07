@@ -157,7 +157,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:manage home tasks')
         ->name('tasks.feedback');
 
-    Route::middleware('permission:manage settings')->group(function () {
+    Route::middleware('role_or_permission:مدير النظام|manage settings')->group(function () {
         Route::get('/trash', [TrashController::class, 'index'])->name('trash.index');
         Route::post('/trash/restore', [TrashController::class, 'restore'])->name('trash.restore');
         Route::get('/settings', [SettingController::class, 'edit'])->name('settings.edit');
