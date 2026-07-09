@@ -44,7 +44,7 @@ class Setting extends Model
     {
         return [
             'clinic_name' => 'عيادة التخاطب',
-            'currency' => 'ر.س',
+            'currency' => 'ج.م',
             'currency_code' => 'EGP',
             'currency_symbol' => 'ج.م',
             'default_therapist_commission_rate' => 0,

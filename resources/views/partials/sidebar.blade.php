@@ -1,13 +1,23 @@
 <!-- Sidebar Container -->
-<aside class="h-full w-72 lg:w-64 bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 flex flex-col shadow-xl lg:shadow-none transition-all duration-300">
+<aside class="h-full w-72 lg:w-64 bg-surface-elevated border-l border-surface-border flex flex-col shadow-xl lg:shadow-none transition-all duration-300">
 
     <!-- Logo / Brand -->
-    <div class="h-16 flex items-center border-b border-gray-200 dark:border-gray-700 px-6">
+    <div class="h-16 flex items-center border-b border-surface-border px-6">
         <a href="/" class="flex min-w-0 items-center gap-3">
             @if($settings?->logo_path)
-                <img src="{{ \Illuminate\Support\Facades\Storage::url($settings->logo_path) }}" alt="شعار العيادة" class="h-9 w-9 rounded-lg object-contain">
+                <img src="{{ \Illuminate\Support\Facades\Storage::url($settings->logo_path) }}" alt="شعار العيادة" class="h-9 w-9 rounded-lg border border-surface-border bg-surface object-contain p-1">
+            @else
+                <span class="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-border bg-primary-soft" aria-hidden="true">
+                    <span class="clinic-soundwave scale-75">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </span>
+                </span>
             @endif
-            <span class="truncate text-xl font-bold text-blue-600 dark:text-blue-400">
+            <span class="truncate text-xl font-bold text-primary">
                 {{ $settings->clinic_name ?? 'عيادة التخاطب' }}
             </span>
         </a>
@@ -17,7 +27,7 @@
 <nav class="flex-1 overflow-y-auto py-4 px-4 space-y-2">
 
     <!-- الروابط الأساسية -->
-    <div class="px-3 pt-1 pb-1 text-[11px] font-semibold tracking-normal text-gray-400 dark:text-gray-500">الرئيسية</div>
+    <div class="px-3 pt-1 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">الرئيسية</div>
     @role('أخصائي تخاطب')
     <x-nav-link :href="route('therapist.dashboard')" :active="request()->routeIs('therapist.dashboard')" class="flex items-center px-4 py-2.5 rounded-lg transition">
         <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
@@ -36,7 +46,7 @@
     @endrole
 
     @can('view patients')
-    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-gray-400 dark:text-gray-500">الملفات</div>
+    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">الملفات</div>
     <x-nav-link :href="route('patients.index')" :active="request()->is('patients*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
         <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
         <span>المرضى (الحالات)</span>
@@ -50,7 +60,7 @@
 
     <!-- الاستقبال والباركود -->
     @if(auth()->user()->can('manage checkins') || auth()->user()->can('view appointments'))
-    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-gray-400 dark:text-gray-500">التشغيل اليومي</div>
+    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">التشغيل اليومي</div>
     @endif
 
     @can('manage checkins')
@@ -70,7 +80,7 @@
 
     <!-- البرامج العلاجية -->
     @can('view therapy')
-    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-gray-400 dark:text-gray-500">العلاج</div>
+    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">العلاج</div>
     <x-nav-link :href="route('programs.index')" :active="request()->is('programs*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
         <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
         <span>البرامج العلاجية</span>
@@ -79,7 +89,7 @@
 
     <!-- الفواتير والمالية -->
     @can('view finance')
-    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-gray-400 dark:text-gray-500">المالية</div>
+    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">المالية</div>
     <x-nav-link :href="route('invoices.index')" :active="request()->is('invoices*') || request()->is('quotations*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
         <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
         <span>الفواتير والمالية</span>
@@ -94,7 +104,7 @@
 
     <!-- الكوادر والرواتب -->
     @if(auth()->user()->can('view hr') || auth()->user()->can('manage inventory') || auth()->user()->can('manage settings') || auth()->user()->hasRole('مدير النظام'))
-    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-gray-400 dark:text-gray-500">الإدارة</div>
+    <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">الإدارة</div>
     @endif
 
     @can('view hr')

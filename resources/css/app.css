@@ -1,3 +1,122 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    :root {
+        --color-primary: #155e5a;
+        --color-primary-hover: #104b48;
+        --color-primary-soft: #e2f0ee;
+        --color-primary-contrast: #ffffff;
+        --color-accent: #c78326;
+        --color-accent-hover: #9f671d;
+        --color-accent-soft: #f6ead4;
+        --color-accent-contrast: #1f2f2e;
+        --color-success: #2f7d63;
+        --color-success-hover: #25664f;
+        --color-success-soft: #e2f2eb;
+        --color-success-contrast: #ffffff;
+        --color-warning: #b7791f;
+        --color-warning-hover: #925f18;
+        --color-warning-soft: #f7edd6;
+        --color-warning-contrast: #20150a;
+        --color-danger: #b24a42;
+        --color-danger-hover: #943a34;
+        --color-danger-soft: #f5e2df;
+        --color-danger-contrast: #ffffff;
+        --color-surface: #f7f3ec;
+        --color-surface-elevated: #fffdfa;
+        --color-surface-muted: #eee6da;
+        --color-surface-border: #dbd0be;
+        --color-surface-overlay: rgb(20 31 38 / 0.46);
+        --color-text: #203332;
+        --color-text-muted: #61706c;
+        --color-text-subtle: #87908b;
+        --color-text-inverted: #fffdfa;
+    }
+
+    .dark {
+        --color-primary: #63beb6;
+        --color-primary-hover: #86d1cb;
+        --color-primary-soft: #173b3b;
+        --color-primary-contrast: #0e2026;
+        --color-accent: #e2a64b;
+        --color-accent-hover: #f0bb68;
+        --color-accent-soft: #4a3218;
+        --color-accent-contrast: #142027;
+        --color-success: #72c59d;
+        --color-success-hover: #8dd8b4;
+        --color-success-soft: #1e3e35;
+        --color-success-contrast: #102027;
+        --color-warning: #d69b35;
+        --color-warning-hover: #eab558;
+        --color-warning-soft: #493417;
+        --color-warning-contrast: #141f26;
+        --color-danger: #dc746b;
+        --color-danger-hover: #eb928a;
+        --color-danger-soft: #4c2527;
+        --color-danger-contrast: #141f26;
+        --color-surface: #101f27;
+        --color-surface-elevated: #172a33;
+        --color-surface-muted: #213741;
+        --color-surface-border: #36525c;
+        --color-surface-overlay: rgb(8 18 24 / 0.68);
+        --color-text: #f4efe7;
+        --color-text-muted: #b8c7c2;
+        --color-text-subtle: #889c98;
+        --color-text-inverted: #101f27;
+    }
+
+    html {
+        background-color: var(--color-surface);
+    }
+
+    body {
+        background-color: var(--color-surface);
+        color: var(--color-text);
+        text-rendering: optimizeLegibility;
+    }
+
+    ::selection {
+        background-color: var(--color-accent-soft);
+        color: var(--color-text);
+    }
+
+    table {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+@layer components {
+    .clinic-card {
+        @apply rounded-lg border border-surface-border bg-surface-elevated shadow-sm;
+    }
+
+    .clinic-field {
+        @apply rounded-lg border-surface-border bg-surface-elevated text-text shadow-sm focus:border-primary focus:ring-primary;
+    }
+
+    .clinic-soundwave {
+        @apply flex items-center gap-1 text-primary;
+    }
+
+    .clinic-soundwave span {
+        @apply block w-1 rounded-full bg-current;
+    }
+
+    .clinic-soundwave span:nth-child(1),
+    .clinic-soundwave span:nth-child(5) {
+        height: 0.65rem;
+        opacity: 0.55;
+    }
+
+    .clinic-soundwave span:nth-child(2),
+    .clinic-soundwave span:nth-child(4) {
+        height: 1rem;
+        opacity: 0.78;
+    }
+
+    .clinic-soundwave span:nth-child(3) {
+        height: 1.35rem;
+    }
+}

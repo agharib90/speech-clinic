@@ -2,37 +2,37 @@
     <x-slot name="title">سلة المحذوفات</x-slot>
 
     @if(session('success'))
-        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">{{ session('success') }}</div>
+        <div class="relative mb-4 rounded-lg border border-success bg-success-soft px-4 py-3 text-success">{{ session('success') }}</div>
     @endif
 
     <div class="space-y-8">
 
         <!-- المرضى المحذوفين -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">المرضى المحذوفين ({{ $trashedPatients->count() }})</h2>
+        <div class="clinic-card p-6">
+            <h2 class="mb-4 text-xl font-bold text-text">المرضى المحذوفين ({{ $trashedPatients->count() }})</h2>
             @if($trashedPatients->count() > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full text-right text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-700">
+                        <thead class="bg-surface-muted text-text-muted">
                             <tr>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">اسم الطفل</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">ولي الأمر</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">تاريخ الحذف</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">إجراء</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">اسم الطفل</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">ولي الأمر</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">تاريخ الحذف</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">إجراء</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y dark:divide-gray-700">
+                        <tbody class="divide-y divide-surface-border">
                             @foreach($trashedPatients as $patient)
                             <tr>
-                                <td class="px-4 py-3 dark:text-white">{{ $patient->name }}</td>
-                                <td class="px-4 py-3 dark:text-gray-300">{{ $patient->guardian->name ?? 'تم حذفه أيضاً' }}</td>
-                                <td class="px-4 py-3 dark:text-gray-300">{{ $patient->deleted_at->format('Y-m-d') }}</td>
+                                <td class="px-4 py-3 text-text">{{ $patient->name }}</td>
+                                <td class="px-4 py-3 text-text-muted">{{ $patient->guardian->name ?? 'تم حذفه أيضاً' }}</td>
+                                <td class="px-4 py-3 text-text-muted">{{ $patient->deleted_at->format('Y-m-d') }}</td>
                                 <td class="px-4 py-3">
                                     <form action="{{ route('trash.restore') }}" method="POST">
                                         @csrf
                                         <input type="hidden" name="type" value="patient">
                                         <input type="hidden" name="id" value="{{ $patient->id }}">
-                                        <button type="submit" class="text-green-600 hover:underline font-bold">استعادة</button>
+                                        <button type="submit" class="font-bold text-success hover:underline">استعادة</button>
                                     </form>
                                 </td>
                             </tr>
@@ -41,34 +41,34 @@
                     </table>
                 </div>
             @else
-                <p class="text-gray-500 dark:text-gray-400 text-center py-4">لا يوجد مرضى محذوفين</p>
+                <p class="py-4 text-center text-text-muted">لا يوجد مرضى محذوفين</p>
             @endif
         </div>
 
         <!-- أولياء الأمور المحذوفين -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">أولياء الأمور المحذوفين ({{ $trashedGuardians->count() }})</h2>
+        <div class="clinic-card p-6">
+            <h2 class="mb-4 text-xl font-bold text-text">أولياء الأمور المحذوفين ({{ $trashedGuardians->count() }})</h2>
             @if($trashedGuardians->count() > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full text-right text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-700">
+                        <thead class="bg-surface-muted text-text-muted">
                             <tr>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">الاسم</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">تاريخ الحذف</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">إجراء</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">الاسم</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">تاريخ الحذف</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">إجراء</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y dark:divide-gray-700">
+                        <tbody class="divide-y divide-surface-border">
                             @foreach($trashedGuardians as $guardian)
                             <tr>
-                                <td class="px-4 py-3 dark:text-white">{{ $guardian->name }}</td>
-                                <td class="px-4 py-3 dark:text-gray-300">{{ $guardian->deleted_at->format('Y-m-d') }}</td>
+                                <td class="px-4 py-3 text-text">{{ $guardian->name }}</td>
+                                <td class="px-4 py-3 text-text-muted">{{ $guardian->deleted_at->format('Y-m-d') }}</td>
                                 <td class="px-4 py-3">
                                     <form action="{{ route('trash.restore') }}" method="POST">
                                         @csrf
                                         <input type="hidden" name="type" value="guardian">
                                         <input type="hidden" name="id" value="{{ $guardian->id }}">
-                                        <button type="submit" class="text-green-600 hover:underline font-bold">استعادة</button>
+                                        <button type="submit" class="font-bold text-success hover:underline">استعادة</button>
                                     </form>
                                 </td>
                             </tr>
@@ -77,36 +77,36 @@
                     </table>
                 </div>
             @else
-                <p class="text-gray-500 dark:text-gray-400 text-center py-4">لا يوجد أولياء أمور محذوفين</p>
+                <p class="py-4 text-center text-text-muted">لا يوجد أولياء أمور محذوفين</p>
             @endif
         </div>
 
         <!-- الفواتير المحذوفة -->
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">الفواتير المحذوفة ({{ $trashedInvoices->count() }})</h2>
+        <div class="clinic-card p-6">
+            <h2 class="mb-4 text-xl font-bold text-text">الفواتير المحذوفة ({{ $trashedInvoices->count() }})</h2>
             @if($trashedInvoices->count() > 0)
                 <div class="overflow-x-auto">
                     <table class="w-full text-right text-sm">
-                        <thead class="bg-gray-50 dark:bg-gray-700">
+                        <thead class="bg-surface-muted text-text-muted">
                             <tr>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">رقم الفاتورة</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">المريض</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">تاريخ الحذف</th>
-                                <th class="px-4 py-3 text-xs font-medium text-gray-500 uppercase">إجراء</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">رقم الفاتورة</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">المريض</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">تاريخ الحذف</th>
+                                <th class="px-4 py-3 text-xs font-medium uppercase">إجراء</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y dark:divide-gray-700">
+                        <tbody class="divide-y divide-surface-border">
                             @foreach($trashedInvoices as $invoice)
                             <tr>
-                                <td class="px-4 py-3 dark:text-white">{{ $invoice->invoice_number }}</td>
-                                <td class="px-4 py-3 dark:text-gray-300">{{ $invoice->patient->name ?? 'محذوف' }}</td>
-                                <td class="px-4 py-3 dark:text-gray-300">{{ $invoice->deleted_at->format('Y-m-d') }}</td>
+                                <td class="px-4 py-3 text-text">{{ $invoice->invoice_number }}</td>
+                                <td class="px-4 py-3 text-text-muted">{{ $invoice->patient->name ?? 'محذوف' }}</td>
+                                <td class="px-4 py-3 text-text-muted">{{ $invoice->deleted_at->format('Y-m-d') }}</td>
                                 <td class="px-4 py-3">
                                     <form action="{{ route('trash.restore') }}" method="POST">
                                         @csrf
                                         <input type="hidden" name="type" value="invoice">
                                         <input type="hidden" name="id" value="{{ $invoice->id }}">
-                                        <button type="submit" class="text-green-600 hover:underline font-bold">استعادة</button>
+                                        <button type="submit" class="font-bold text-success hover:underline">استعادة</button>
                                     </form>
                                 </td>
                             </tr>
@@ -115,7 +115,7 @@
                     </table>
                 </div>
             @else
-                <p class="text-gray-500 dark:text-gray-400 text-center py-4">لا توجد فواتير محذوفة</p>
+                <p class="py-4 text-center text-text-muted">لا توجد فواتير محذوفة</p>
             @endif
         </div>
 

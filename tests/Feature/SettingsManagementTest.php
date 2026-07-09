@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Models\Guardian;
 use App\Models\Invoice;
+use App\Models\InvoicePayment;
 use App\Models\Patient;
+use App\Models\PayrollRecord;
 use App\Models\Setting;
 use App\Models\Therapist;
 use App\Models\User;
@@ -92,10 +94,62 @@ class SettingsManagementTest extends TestCase
         Storage::disk('public')->assertExists($settings->logo_path);
     }
 
+    public function test_default_currency_values_are_egp_and_legacy_currency_symbol_is_egp(): void
+    {
+        $defaults = Setting::defaults();
+
+        $this->assertSame('EGP', $defaults['currency_code']);
+        $this->assertSame('ج.م', $defaults['currency_symbol']);
+        $this->assertSame('ج.م', $defaults['currency']);
+
+        $settings = Setting::firstOrCreate(['id' => 1], $defaults);
+
+        $this->assertSame('EGP', $settings->currency_code);
+        $this->assertSame('ج.م', $settings->currency_symbol);
+        $this->assertSame('ج.م', $settings->currency);
+    }
+
+    public function test_legacy_currency_alignment_migration_only_updates_exact_old_symbol(): void
+    {
+        Setting::query()->delete();
+
+        $legacy = Setting::create(array_merge(Setting::defaults(), [
+            'clinic_name' => 'Legacy Currency Clinic',
+            'currency' => 'ر.س',
+        ]));
+        $custom = Setting::create(array_merge(Setting::defaults(), [
+            'clinic_name' => 'Custom Currency Clinic',
+            'currency' => 'USD',
+            'currency_symbol' => '$',
+        ]));
+        $manualSaudi = Setting::create(array_merge(Setting::defaults(), [
+            'clinic_name' => 'Manual Saudi Currency Clinic',
+            'currency' => 'ر.س',
+            'currency_symbol' => 'ر.س',
+        ]));
+
+        $migration = require database_path('migrations/2026_07_07_000002_align_legacy_currency_setting_with_egp.php');
+        $migration->up();
+
+        $this->assertSame('ج.م', $legacy->fresh()->currency);
+        $this->assertSame('USD', $custom->fresh()->currency);
+        $this->assertSame('ر.س', $manualSaudi->fresh()->currency);
+    }
+
     public function test_currency_settings_do_not_change_existing_invoice_amounts(): void
     {
         $settingsUser = $this->userWithPermissions(['manage settings']);
         $patient = $this->createPatient('Finance Settings Patient');
+        $therapistUser = User::factory()->create();
+        $therapist = Therapist::create([
+            'user_id' => $therapistUser->id,
+            'name' => 'Payroll Therapist',
+            'salary_type' => 'monthly',
+            'monthly_salary' => 3000,
+            'daily_salary' => 0,
+            'commission_rate' => 0,
+            'is_active' => true,
+        ]);
 
         $invoice = Invoice::create([
             'patient_id' => $patient->id,
@@ -103,6 +157,20 @@ class SettingsManagementTest extends TestCase
             'issue_date' => '2026-07-07',
             'status' => 'غير مدفوعة',
             'total' => 1250.75,
+        ]);
+        $payment = InvoicePayment::create([
+            'invoice_id' => $invoice->id,
+            'amount' => 250.25,
+            'payment_date' => '2026-07-07',
+            'method' => 'cash',
+        ]);
+        $payrollRecord = PayrollRecord::create([
+            'therapist_id' => $therapist->id,
+            'type' => 'إضافة',
+            'amount' => 300.50,
+            'description' => 'Bonus',
+            'month' => 7,
+            'year' => 2026,
         ]);
 
         $this->actingAs($settingsUser)
@@ -120,6 +188,8 @@ class SettingsManagementTest extends TestCase
         $this->assertSame('ج.م', $settings->currency_symbol);
         $this->assertSame('ج.م', $settings->currency);
         $this->assertEquals(1250.75, $invoice->fresh()->total);
+        $this->assertEquals(250.25, $payment->fresh()->amount);
+        $this->assertEquals(300.50, $payrollRecord->fresh()->amount);
     }
 
     public function test_default_commission_applies_to_new_therapist_user_only(): void
