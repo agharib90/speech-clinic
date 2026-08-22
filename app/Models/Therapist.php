@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class Therapist extends Model
 {
     use SoftDeletes;
+
     protected $casts = [
         'hire_date' => 'date', // هذا يحول النص من DB إلى كائن Carbon أوتوماتيكياً
     ];
@@ -17,7 +18,7 @@ class Therapist extends Model
     protected $fillable = [
         'user_id', 'name', 'specialization', 'phone', 'email', 'license_number',
         'hire_date', 'salary_type', 'daily_salary', 'monthly_salary',
-        'commission_rate', 'is_active'
+        'commission_rate', 'is_active',
     ];
 
     // مربوط بحساب دخول
@@ -54,5 +55,12 @@ class Therapist extends Model
     public function serviceRates(): HasMany
     {
         return $this->hasMany(TherapistServiceRate::class);
+    }
+
+    public function workPeriods(): HasMany
+    {
+        return $this->hasMany(TherapistWorkPeriod::class)
+            ->orderBy('weekday')
+            ->orderBy('starts_at');
     }
 }

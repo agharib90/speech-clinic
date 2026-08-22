@@ -230,9 +230,13 @@ However, server-side conflict validation must remain as a second safety layer
 for concurrency/race conditions.
 
 Status:
-Client requirement added 2026-08-22.
-Existing capabilities must be inspected before implementation.
-Do not create a duplicate employee schedule/availability system if one already exists.
+Implemented; pending manual acceptance.
+Specialist personal work periods support multiple periods per weekday, and the shared
+availability engine subtracts non-cancelled appointments and applies the selected Service
+duration with a centralized 15-minute start increment. Past starts are excluded for today,
+and personal work periods are also enforced for controlled legacy bookings. Clinic-wide working hours remain a
+separate single-period setting and were not redesigned or imposed on specialist periods in
+this phase.
 
 ---
 

@@ -15,6 +15,7 @@ use App\Models\Service;
 use App\Models\SessionType;
 use App\Models\Specialty;
 use App\Models\Therapist;
+use App\Models\TherapistWorkPeriod;
 use App\Models\TherapyProgram;
 use App\Models\TherapySession;
 use App\Models\User;
@@ -508,6 +509,13 @@ class PatientWorkspaceTest extends TestCase
             'is_active' => true,
         ]);
         $therapist->services()->attach([$item->service_id, $foreignItem->service_id]);
+        foreach (array_keys(TherapistWorkPeriod::WEEKDAYS) as $weekday) {
+            $therapist->workPeriods()->create([
+                'weekday' => $weekday,
+                'starts_at' => '08:00',
+                'ends_at' => '22:00',
+            ]);
+        }
         $action = URL::signedRoute('appointments.store', ['workspace_patient' => $patient->id]);
         $payload = [
             'workspace' => 1,
@@ -515,7 +523,7 @@ class PatientWorkspaceTest extends TestCase
             'patient_id' => $patient->id,
             'patient_service_plan_item_id' => $item->id,
             'therapist_id' => $therapistUser->id,
-            'scheduled_at' => now()->addDays(3)->format('Y-m-d H:i:s'),
+            'scheduled_at' => now()->addDays(3)->setTime(10, 0)->format('Y-m-d H:i:s'),
         ];
 
         $this->actingAs($user)->post($action, $payload)
@@ -529,7 +537,7 @@ class PatientWorkspaceTest extends TestCase
 
         $this->actingAs($user)->from(route('patients.workspace', $patient))->post($action, array_replace($payload, [
             'patient_service_plan_item_id' => $foreignItem->id,
-            'scheduled_at' => now()->addDays(4)->format('Y-m-d H:i:s'),
+            'scheduled_at' => now()->addDays(4)->setTime(10, 0)->format('Y-m-d H:i:s'),
         ]))->assertSessionHasErrors('patient_service_plan_item_id');
 
         $this->assertDatabaseMissing('appointments', [

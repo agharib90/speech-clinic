@@ -244,6 +244,7 @@ class PatientWorkspaceBuilder
                     'patient_id' => $item->plan->patient_id,
                     'service_name' => $item->service->name,
                     'specialty_name' => $item->service->specialty->name,
+                    'duration_minutes' => $item->service->default_duration_minutes,
                     'final_unit_price' => $item->final_unit_price,
                     'required_deposit' => PatientServicePlanAllocator::centsToDecimal(
                         $eligibility['required_deposit_cents']

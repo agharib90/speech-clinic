@@ -122,7 +122,7 @@
                                                 {{ mb_substr($therapist->name, 0, 1) }}
                                             </div>
                                             <div>
-                                                <p class="font-semibold text-gray-900 dark:text-white">{{ $therapist->name }}</p>
+                                                <a href="{{ route('therapists.show', $therapist) }}" class="clinic-entity-link font-semibold">{{ $therapist->name }}</a>
                                                 <p class="text-xs text-gray-500 dark:text-gray-400">{{ $therapist->phone ?: 'بدون هاتف' }}</p>
                                             </div>
                                         </div>

@@ -12,6 +12,7 @@ use App\Models\Service;
 use App\Models\SessionType;
 use App\Models\Specialty;
 use App\Models\Therapist;
+use App\Models\TherapistWorkPeriod;
 use App\Models\User;
 use App\Services\PatientServicePlanAllocator;
 use Database\Seeders\RolePermissionSeeder;
@@ -110,6 +111,66 @@ class LegacyAppointmentExceptionTest extends TestCase
         $this->assertDatabaseCount('appointments', 1);
     }
 
+    public function test_legacy_booking_between_shifts_is_rejected(): void
+    {
+        $admin = $this->userWithPermissions(['create appointments', 'create legacy appointments']);
+        [$patient, $therapistUser, $sessionType] = $this->legacyFixture();
+        $scheduledAt = now()->addDays(16)->setTime(16, 0);
+        $this->replaceScheduleForDate($therapistUser, $scheduledAt, [
+            ['08:00', '15:00'],
+            ['18:00', '22:00'],
+        ]);
+
+        $this->actingAs($admin)->post(route('appointments.store'), $this->legacyPayload(
+            $patient,
+            $therapistUser,
+            $sessionType,
+            'حجز داخل الفاصل',
+            $scheduledAt
+        ))->assertSessionHasErrors('scheduled_at');
+
+        $this->assertDatabaseCount('appointments', 0);
+    }
+
+    public function test_legacy_booking_crossing_shift_end_is_rejected(): void
+    {
+        $admin = $this->userWithPermissions(['create appointments', 'create legacy appointments']);
+        [$patient, $therapistUser, $sessionType] = $this->legacyFixture(duration: 30);
+        $scheduledAt = now()->addDays(17)->setTime(14, 45);
+        $this->replaceScheduleForDate($therapistUser, $scheduledAt, [['08:00', '15:00']]);
+
+        $this->actingAs($admin)->post(route('appointments.store'), $this->legacyPayload(
+            $patient,
+            $therapistUser,
+            $sessionType,
+            'موعد يتجاوز نهاية الوردية',
+            $scheduledAt
+        ))->assertSessionHasErrors('scheduled_at');
+
+        $this->assertDatabaseCount('appointments', 0);
+    }
+
+    public function test_legacy_booking_that_fits_exactly_at_shift_end_succeeds(): void
+    {
+        $admin = $this->userWithPermissions(['create appointments', 'create legacy appointments']);
+        [$patient, $therapistUser, $sessionType] = $this->legacyFixture(duration: 30);
+        $scheduledAt = now()->addDays(18)->setTime(14, 30);
+        $this->replaceScheduleForDate($therapistUser, $scheduledAt, [['08:00', '15:00']]);
+
+        $this->actingAs($admin)->post(route('appointments.store'), $this->legacyPayload(
+            $patient,
+            $therapistUser,
+            $sessionType,
+            'موعد صالح داخل الوردية',
+            $scheduledAt
+        ))->assertRedirect();
+
+        $this->assertDatabaseHas('appointments', [
+            'therapist_id' => $therapistUser->id,
+            'status' => 'مجدول',
+        ]);
+    }
+
     public function test_new_legacy_exception_renders_calm_badge(): void
     {
         $admin = $this->userWithPermissions([
@@ -141,7 +202,7 @@ class LegacyAppointmentExceptionTest extends TestCase
             'patient_id' => $item->plan->patient_id,
             'patient_service_plan_item_id' => $item->id,
             'therapist_id' => $therapist->user_id,
-            'scheduled_at' => now()->addDays(20)->format('Y-m-d\TH:i'),
+            'scheduled_at' => now()->addDays(20)->setTime(10, 0)->format('Y-m-d\TH:i'),
         ])->assertRedirect();
 
         $this->assertNull(Appointment::firstOrFail()->legacy_booking_reason);
@@ -199,6 +260,19 @@ class LegacyAppointmentExceptionTest extends TestCase
             'duration_minutes' => $duration,
             'price' => 100,
         ]);
+        $therapist = Therapist::create([
+            'user_id' => $therapistUser->id,
+            'name' => 'أخصائي قديم '.uniqid(),
+            'salary_type' => 'monthly',
+            'is_active' => true,
+        ]);
+        foreach (array_keys(TherapistWorkPeriod::WEEKDAYS) as $weekday) {
+            $therapist->workPeriods()->create([
+                'weekday' => $weekday,
+                'starts_at' => '08:00',
+                'ends_at' => '22:00',
+            ]);
+        }
 
         return [$patient, $therapistUser, $sessionType];
     }
@@ -214,7 +288,7 @@ class LegacyAppointmentExceptionTest extends TestCase
             'patient_id' => $patient->id,
             'therapist_id' => $therapistUser->id,
             'session_type_id' => $sessionType->id,
-            'scheduled_at' => ($scheduledAt ?? now()->addDays(10))->format('Y-m-d\TH:i'),
+            'scheduled_at' => ($scheduledAt ?? now()->addDays(10)->setTime(10, 0))->format('Y-m-d\TH:i'),
             'legacy_booking_reason' => $reason,
         ];
     }
@@ -255,6 +329,13 @@ class LegacyAppointmentExceptionTest extends TestCase
                 'is_active' => true,
             ]);
             $therapist->services()->attach($service);
+            foreach (array_keys(TherapistWorkPeriod::WEEKDAYS) as $weekday) {
+                $therapist->workPeriods()->create([
+                    'weekday' => $weekday,
+                    'starts_at' => '08:00',
+                    'ends_at' => '22:00',
+                ]);
+            }
         }
 
         $invoice = Invoice::create([
@@ -273,6 +354,20 @@ class LegacyAppointmentExceptionTest extends TestCase
         app(PatientServicePlanAllocator::class)->allocate($plan, $invoicePayment);
 
         return [$item, $therapist];
+    }
+
+    private function replaceScheduleForDate(User $therapistUser, $date, array $periods): void
+    {
+        $therapist = Therapist::where('user_id', $therapistUser->id)->firstOrFail();
+        $therapist->workPeriods()->where('weekday', $date->dayOfWeek)->delete();
+
+        foreach ($periods as [$start, $end]) {
+            $therapist->workPeriods()->create([
+                'weekday' => $date->dayOfWeek,
+                'starts_at' => $start,
+                'ends_at' => $end,
+            ]);
+        }
     }
 
     private function patient(): Patient

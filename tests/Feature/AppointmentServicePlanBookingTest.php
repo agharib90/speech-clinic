@@ -17,6 +17,7 @@ use App\Models\Setting;
 use App\Models\Specialty;
 use App\Models\Therapist;
 use App\Models\TherapistEarning;
+use App\Models\TherapistWorkPeriod;
 use App\Models\TherapySession;
 use App\Models\User;
 use App\Services\AppointmentServicePlanBookingService;
@@ -215,6 +216,110 @@ class AppointmentServicePlanBookingTest extends TestCase
             ->assertSessionHasErrors('therapist_id');
     }
 
+    public function test_v2_booking_rejects_times_outside_schedule_between_shifts_and_crossing_shift_end(): void
+    {
+        $manager = $this->userWithPermissions(['create appointments']);
+        [$item, $therapist] = $this->bookingFixture('100.00', plannedQuantity: 2);
+        $this->fund($item->plan, '200.00');
+        $date = now()->addDays(30)->startOfDay();
+
+        $therapist->workPeriods()->where('weekday', $date->dayOfWeek)->delete();
+        $therapist->workPeriods()->createMany([
+            ['weekday' => $date->dayOfWeek, 'starts_at' => '08:00', 'ends_at' => '15:00'],
+            ['weekday' => $date->dayOfWeek, 'starts_at' => '18:00', 'ends_at' => '22:00'],
+        ]);
+
+        foreach (['07:45', '16:00', '14:45'] as $time) {
+            $payload = $this->bookingPayload($item, $therapist, 10);
+            $payload['scheduled_at'] = $date->format('Y-m-d').'T'.$time;
+
+            $this->actingAs($manager)->post(route('appointments.store'), $payload)
+                ->assertSessionHasErrors('scheduled_at');
+        }
+
+        $this->assertDatabaseCount('appointments', 0);
+    }
+
+    public function test_booking_rechecks_stale_conflicts_allows_adjacent_time_and_ignores_cancelled_appointments(): void
+    {
+        $manager = $this->userWithPermissions(['create appointments']);
+        [$item, $therapist] = $this->bookingFixture('100.00', plannedQuantity: 3);
+        $this->fund($item->plan, '300.00');
+        $date = now()->addDays(35)->startOfDay();
+
+        $this->actingAs($manager)->getJson(route('appointments.availability', [
+            'patient_service_plan_item_id' => $item->id,
+            'therapist_id' => $therapist->user_id,
+            'date' => $date->toDateString(),
+        ]))->assertOk();
+
+        Appointment::create([
+            'patient_id' => $item->plan->patient_id,
+            'therapist_id' => $therapist->user_id,
+            'scheduled_at' => $date->copy()->setTime(9, 0),
+            'end_at' => $date->copy()->setTime(9, 30),
+            'status' => 'مجدول',
+        ]);
+        $stalePayload = $this->bookingPayload($item, $therapist, 15);
+        $stalePayload['scheduled_at'] = $date->format('Y-m-d').'T09:00';
+        $this->actingAs($manager)->post(route('appointments.store'), $stalePayload)
+            ->assertSessionHasErrors('therapist_id');
+
+        $adjacentPayload = $stalePayload;
+        $adjacentPayload['scheduled_at'] = $date->format('Y-m-d').'T09:30';
+        $this->actingAs($manager)->post(route('appointments.store'), $adjacentPayload)
+            ->assertRedirect();
+
+        Appointment::create([
+            'patient_id' => $item->plan->patient_id,
+            'therapist_id' => $therapist->user_id,
+            'scheduled_at' => $date->copy()->setTime(11, 0),
+            'end_at' => $date->copy()->setTime(11, 30),
+            'status' => 'ملغى',
+        ]);
+        $cancelledPayload = $stalePayload;
+        $cancelledPayload['scheduled_at'] = $date->format('Y-m-d').'T11:00';
+        $this->actingAs($manager)->post(route('appointments.store'), $cancelledPayload)
+            ->assertRedirect();
+    }
+
+    public function test_availability_endpoint_rejects_item_after_booking_eligibility_becomes_stale(): void
+    {
+        $manager = $this->userWithPermissions(['create appointments']);
+        [$item, $therapist] = $this->bookingFixture('300.00');
+        $this->fund($item->plan, '150.00');
+        $date = now()->addDays(40)->setTime(10, 0);
+        $endpoint = route('appointments.availability', [
+            'patient_service_plan_item_id' => $item->id,
+            'therapist_id' => $therapist->user_id,
+            'date' => $date->toDateString(),
+        ]);
+
+        $this->actingAs($manager)->getJson($endpoint)->assertOk();
+
+        $payload = $this->bookingPayload($item, $therapist, 20);
+        $payload['scheduled_at'] = $date->format('Y-m-d\TH:i');
+        $this->actingAs($manager)->post(route('appointments.store'), $payload)->assertRedirect();
+
+        $this->actingAs($manager)->getJson($endpoint)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('patient_service_plan_item_id');
+    }
+
+    public function test_v2_booking_still_rejects_forged_past_datetime(): void
+    {
+        $manager = $this->userWithPermissions(['create appointments']);
+        [$item, $therapist] = $this->bookingFixture('100.00');
+        $this->fund($item->plan, '100.00');
+        $payload = $this->bookingPayload($item, $therapist, 1);
+        $payload['scheduled_at'] = now()->subMinute()->format('Y-m-d\TH:i');
+
+        $this->actingAs($manager)->post(route('appointments.store'), $payload)
+            ->assertSessionHasErrors('scheduled_at');
+
+        $this->assertDatabaseCount('appointments', 0);
+    }
+
     public function test_legacy_booking_rendering_and_completion_continue_to_work(): void
     {
         $manager = $this->userWithPermissions([
@@ -225,6 +330,19 @@ class AppointmentServicePlanBookingTest extends TestCase
         ]);
         $patient = $this->patient();
         $therapistUser = User::factory()->create();
+        $legacyTherapist = Therapist::create([
+            'user_id' => $therapistUser->id,
+            'name' => 'أخصائي حجز قديم',
+            'salary_type' => 'monthly',
+            'is_active' => true,
+        ]);
+        foreach (array_keys(TherapistWorkPeriod::WEEKDAYS) as $weekday) {
+            $legacyTherapist->workPeriods()->create([
+                'weekday' => $weekday,
+                'starts_at' => '08:00',
+                'ends_at' => '22:00',
+            ]);
+        }
         $sessionType = SessionType::create(['name' => 'جلسة قديمة', 'duration_minutes' => 30, 'price' => 100]);
 
         $this->actingAs($manager)->post(route('appointments.store'), [
@@ -344,6 +462,13 @@ class AppointmentServicePlanBookingTest extends TestCase
             'is_active' => true,
         ]);
         $therapist->services()->attach($service);
+        foreach (array_keys(TherapistWorkPeriod::WEEKDAYS) as $weekday) {
+            $therapist->workPeriods()->create([
+                'weekday' => $weekday,
+                'starts_at' => '08:00',
+                'ends_at' => '22:00',
+            ]);
+        }
 
         return [$item, $therapist];
     }

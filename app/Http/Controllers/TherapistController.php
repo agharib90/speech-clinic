@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Attendance;
 use App\Models\Appointment;
+use App\Models\Attendance;
 use App\Models\Setting;
 use App\Models\Therapist;
+use App\Models\TherapistServiceRate;
+use App\Models\TherapistWorkPeriod;
 use App\Models\TherapyProgram;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TherapistController extends Controller
 {
@@ -60,6 +64,36 @@ class TherapistController extends Controller
         return view('hr.therapists.create');
     }
 
+    public function show(Therapist $therapist)
+    {
+        $therapist->load([
+            'user',
+            'specialties',
+            'services.specialty',
+            'workPeriods',
+        ]);
+        $currentRates = $therapist->services->mapWithKeys(function ($service) use ($therapist) {
+            $rate = TherapistServiceRate::resolveFor($therapist, $service, today());
+
+            return [$service->id => $rate?->amount];
+        });
+        $schedule = collect(TherapistWorkPeriod::WEEKDAYS)->map(function ($label, $weekday) use ($therapist) {
+            return [
+                'weekday' => $weekday,
+                'label' => $label,
+                'periods' => $therapist->workPeriods
+                    ->where('weekday', $weekday)
+                    ->map(fn (TherapistWorkPeriod $period) => [
+                        'starts_at' => substr($period->starts_at, 0, 5),
+                        'ends_at' => substr($period->ends_at, 0, 5),
+                    ])
+                    ->values(),
+            ];
+        })->values();
+
+        return view('hr.therapists.show', compact('therapist', 'currentRates', 'schedule'));
+    }
+
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -83,6 +117,63 @@ class TherapistController extends Controller
         Therapist::create($data);
 
         return redirect()->route('therapists.index')->with('success', 'تم إضافة الأخصائي بنجاح');
+    }
+
+    public function updateSchedule(Request $request, Therapist $therapist)
+    {
+        $data = $request->validate([
+            'periods' => ['nullable', 'array'],
+            'periods.*' => ['array'],
+            'periods.*.*' => ['array'],
+            'periods.*.*.starts_at' => ['required', 'date_format:H:i'],
+            'periods.*.*.ends_at' => ['required', 'date_format:H:i'],
+        ]);
+        $normalized = [];
+
+        foreach ($data['periods'] ?? [] as $weekday => $periods) {
+            if (! ctype_digit((string) $weekday)
+                || ! array_key_exists((int) $weekday, TherapistWorkPeriod::WEEKDAYS)) {
+                throw ValidationException::withMessages([
+                    'periods' => 'يوم العمل المحدد غير صالح.',
+                ]);
+            }
+
+            $dayPeriods = collect($periods)
+                ->map(function (array $period, int $index) use ($weekday) {
+                    if ($period['ends_at'] <= $period['starts_at']) {
+                        throw ValidationException::withMessages([
+                            "periods.{$weekday}.{$index}.ends_at" => 'وقت نهاية الفترة يجب أن يكون بعد وقت بدايتها.',
+                        ]);
+                    }
+
+                    return $period + ['original_index' => $index];
+                })
+                ->sortBy('starts_at')
+                ->values();
+
+            $previousEnd = null;
+            foreach ($dayPeriods as $period) {
+                if ($previousEnd !== null && $period['starts_at'] < $previousEnd) {
+                    throw ValidationException::withMessages([
+                        "periods.{$weekday}.{$period['original_index']}.starts_at" => 'فترات العمل في اليوم نفسه لا يجوز أن تتداخل أو تتكرر.',
+                    ]);
+                }
+
+                $previousEnd = $period['ends_at'];
+                $normalized[] = [
+                    'weekday' => (int) $weekday,
+                    'starts_at' => $period['starts_at'],
+                    'ends_at' => $period['ends_at'],
+                ];
+            }
+        }
+
+        DB::transaction(function () use ($therapist, $normalized) {
+            $therapist->workPeriods()->delete();
+            $therapist->workPeriods()->createMany($normalized);
+        });
+
+        return back()->with('success', 'تم حفظ جدول عمل الأخصائي بنجاح.');
     }
 
     // تسجيل حضور يومي للأخصائيين

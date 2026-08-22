@@ -15,6 +15,7 @@ use App\Models\TherapistEarning;
 use App\Models\TherapyProgram;
 use App\Models\TherapySession;
 use App\Models\User;
+use App\Services\AppointmentAvailabilityService;
 use App\Services\AppointmentServicePlanBookingService;
 use App\Services\PatientServicePlanAllocator;
 use App\Support\PatientWorkspaceContext;
@@ -111,6 +112,7 @@ class AppointmentController extends Controller
                     'patient_name' => $item->plan->patient->name,
                     'service_name' => $item->service->name,
                     'specialty_name' => $item->service->specialty->name,
+                    'duration_minutes' => $item->service->default_duration_minutes,
                     'final_unit_price' => $item->final_unit_price,
                     'required_deposit' => PatientServicePlanAllocator::centsToDecimal(
                         $eligibility['required_deposit_cents']
@@ -138,7 +140,8 @@ class AppointmentController extends Controller
 
     public function store(
         StoreAppointmentRequest $request,
-        AppointmentServicePlanBookingService $bookingService
+        AppointmentServicePlanBookingService $bookingService,
+        AppointmentAvailabilityService $availability
     ) {
         $validated = $request->validated();
         $fromWorkspace = PatientWorkspaceContext::validate($request, (int) $validated['patient_id']);
@@ -165,6 +168,20 @@ class AppointmentController extends Controller
         $scheduledAt = Carbon::parse($validated['scheduled_at']);
         $sessionType = SessionType::findOrFail($validated['session_type_id']);
         $endAt = $scheduledAt->copy()->addMinutes($sessionType->duration_minutes);
+        $therapist = Therapist::query()
+            ->where('user_id', $validated['therapist_id'])
+            ->where('is_active', true)
+            ->first();
+
+        if (! $therapist || ! $availability->fitsWithinWorkPeriod(
+            $therapist,
+            $scheduledAt,
+            (int) $sessionType->duration_minutes
+        )) {
+            throw ValidationException::withMessages([
+                'scheduled_at' => 'الموعد المختار خارج فترات عمل الأخصائي أو لا يتسع لمدة الجلسة.',
+            ]);
+        }
 
         $conflict = Appointment::where('therapist_id', $validated['therapist_id'])
             ->where('status', '!=', 'ملغى')

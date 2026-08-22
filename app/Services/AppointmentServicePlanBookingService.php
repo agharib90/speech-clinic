@@ -14,6 +14,10 @@ use Illuminate\Validation\ValidationException;
 
 class AppointmentServicePlanBookingService
 {
+    public function __construct(
+        private readonly AppointmentAvailabilityService $availability
+    ) {}
+
     public function depositPercentage(): int
     {
         $percentage = Setting::query()->value('appointment_confirmation_deposit_percentage');
@@ -91,6 +95,12 @@ class AppointmentServicePlanBookingService
 
             $scheduledAt = Carbon::parse($data['scheduled_at']);
             $endAt = $scheduledAt->copy()->addMinutes($duration);
+
+            if (! $this->availability->isWithinWorkPeriod($therapist, $scheduledAt, $duration)) {
+                throw ValidationException::withMessages([
+                    'scheduled_at' => 'الموعد المختار خارج فترات عمل الأخصائي أو لا يتسع لمدة الخدمة.',
+                ]);
+            }
 
             if ($this->hasConflict((int) $therapist->user_id, $scheduledAt, $endAt)) {
                 throw ValidationException::withMessages([

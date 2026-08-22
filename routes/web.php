@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AppointmentAvailabilityController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ArticulationAssessmentController;
 use App\Http\Controllers\CaseHistoryController;
@@ -86,6 +87,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/appointments', [AppointmentController::class, 'store'])
         ->middleware('permission:create appointments')
         ->name('appointments.store');
+    Route::get('/appointments/availability', AppointmentAvailabilityController::class)
+        ->middleware('permission:create appointments')
+        ->name('appointments.availability');
     Route::post('/appointments/{appointment}/update-status', [AppointmentController::class, 'updateStatus'])
         ->middleware('permission:edit appointments')
         ->name('appointments.update-status');
@@ -122,7 +126,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/payroll/add-record', [PayrollController::class, 'addRecord'])->name('payroll.addRecord');
     });
     Route::resource('therapists', TherapistController::class)
-        ->only(['index'])
+        ->only(['index', 'show'])
         ->middleware('permission:view hr');
     Route::resource('therapists', TherapistController::class)
         ->only(['create', 'store'])
@@ -130,6 +134,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/therapists/attendance', [TherapistController::class, 'markAttendance'])
         ->middleware('permission:manage therapists')
         ->name('therapists.attendance');
+    Route::put('/therapists/{therapist}/work-schedule', [TherapistController::class, 'updateSchedule'])
+        ->middleware('permission:manage therapists')
+        ->name('therapists.work-schedule.update');
     Route::middleware('permission:manage therapist services')->group(function () {
         Route::get('/therapists/{therapist}/services', [TherapistServiceController::class, 'edit'])
             ->name('therapists.services.edit');
