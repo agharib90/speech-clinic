@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\ArticulationAssessment;
 use App\Models\Appointment;
+use App\Models\ArticulationAssessment;
 use App\Models\ClinicalProgressPoint;
 use App\Models\Guardian;
 use App\Models\Patient;
@@ -141,7 +141,7 @@ class ClinicalToolsTest extends TestCase
 
     public function test_program_show_renders_clinical_tools(): void
     {
-        $user = $this->actingAdmin(['view therapy', 'edit therapy']);
+        $user = $this->actingAdmin(['view therapy', 'edit therapy', 'view patients']);
         $program = $this->createProgram($user);
         SessionMilestone::create([
             'therapy_program_id' => $program->id,
@@ -157,6 +157,7 @@ class ClinicalToolsTest extends TestCase
         $response->assertSee('07/01');
         $response->assertSee('بنك اختبار النطق العربي');
         $response->assertSee('رسم التقدم عبر الوقت');
+        $response->assertSee('href="'.route('patients.workspace', $program->patient).'"', false);
     }
 
     public function test_progress_report_view_renders_session_milestones(): void
@@ -285,7 +286,7 @@ class ClinicalToolsTest extends TestCase
             'name' => 'طفل تجريبي',
             'birth_date' => '2020-01-01',
             'gender' => 'male',
-            'barcode' => 'PAT-TEST-' . uniqid(),
+            'barcode' => 'PAT-TEST-'.uniqid(),
             'qr_code' => 'PAT-TEST',
             'is_active' => true,
         ]);

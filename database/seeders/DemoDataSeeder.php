@@ -66,6 +66,8 @@ class DemoDataSeeder extends Seeder
             'manage milestones', 'manage home tasks',
             'view finance', 'manage invoices', 'manage quotations', 'manage packages',
             'view hr', 'manage therapists', 'manage payroll',
+            'manage specialties', 'manage services', 'manage therapist services',
+            'manage patient service plans', 'manage patient discounts',
             'manage inventory', 'manage suppliers',
             'view reports', 'manage settings',
         ];

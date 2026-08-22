@@ -143,8 +143,8 @@
                                 {{ $apt->patient->name }}
                             </p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
-                                {{ $apt->sessionType->name }}
-                                · {{ $apt->sessionType->duration_minutes }} دقيقة
+                                {{ $apt->patientServicePlanItem?->service?->name ?? $apt->sessionType?->name ?? 'خدمة غير محددة' }}
+                                · {{ $apt->patientServicePlanItem?->service?->default_duration_minutes ?? $apt->sessionType?->duration_minutes ?? 0 }} دقيقة
                             </p>
                         </div>
 
@@ -422,7 +422,7 @@
                         </td>
                         <td class="px-6 py-3">
                             <span class="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 px-2.5 py-1 rounded-full">
-                                {{ $apt->sessionType->name }}
+                                {{ $apt->patientServicePlanItem?->service?->name ?? $apt->sessionType?->name ?? 'خدمة غير محددة' }}
                             </span>
                         </td>
                     </tr>

@@ -142,7 +142,7 @@
                         @method('PUT')
                         <input type="hidden" name="section" value="financial">
 
-                        <div class="grid gap-5 md:grid-cols-3">
+                        <div class="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
                             <label class="block">
                                 <span class="{{ $labelClass }}">كود العملة</span>
                                 <input type="text" name="currency_code" value="{{ old('currency_code', $settings->currency_code ?? 'EGP') }}" class="{{ $fieldClass }}" maxlength="3" required>
@@ -160,6 +160,12 @@
                                 <input type="number" step="0.01" min="0" max="100" name="default_therapist_commission_rate" value="{{ old('default_therapist_commission_rate', $settings->default_therapist_commission_rate) }}" class="{{ $fieldClass }}" required>
                                 <p class="{{ $hintClass }}">تطبق على الأخصائي الجديد فقط عند عدم إدخال عمولة مخصصة.</p>
                                 @error('default_therapist_commission_rate') <span class="{{ $errorClass }}">{{ $message }}</span> @enderror
+                            </label>
+                            <label class="block">
+                                <span class="{{ $labelClass }}">نسبة مقدم تأكيد الموعد (%)</span>
+                                <input type="number" min="1" max="100" name="appointment_confirmation_deposit_percentage" value="{{ old('appointment_confirmation_deposit_percentage', $settings->appointment_confirmation_deposit_percentage ?? 50) }}" class="{{ $fieldClass }}" required>
+                                <p class="{{ $hintClass }}">النسبة المطلوبة من السعر النهائي للخدمة بعد الخصم لتأكيد حجز الموعد.</p>
+                                @error('appointment_confirmation_deposit_percentage') <span class="{{ $errorClass }}">{{ $message }}</span> @enderror
                             </label>
                         </div>
 

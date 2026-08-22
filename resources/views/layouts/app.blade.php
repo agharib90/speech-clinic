@@ -9,14 +9,15 @@
     @endphp
     <title>{{ $pageTitle }} - {{ $clinicName }}</title>
 
+    @include('partials.theme-init')
+
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=ibm-plex-sans-arabic:400,500,600,700|inter:400,500,600,700&display=swap" rel="stylesheet" />
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>[x-cloak] { display: none !important; }</style>
 </head>
-<body class="font-sans antialiased bg-surface text-text transition-colors duration-300">
+<body class="bg-surface font-sans text-text antialiased transition-colors duration-150">
     @php
         $currentRole = Auth::user()->roles->pluck('name')->first() ?? 'بدون دور';
     @endphp
@@ -38,7 +39,7 @@
         </div>
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <nav class="sticky top-0 z-20 border-b border-surface-border bg-surface-elevated px-4 py-3 backdrop-blur sm:px-6">
+            <nav class="sticky top-0 z-20 border-b border-surface-border bg-surface-elevated px-4 py-3 sm:px-6 lg:px-8">
                 <div class="flex items-center justify-between gap-3">
                     <div class="flex min-w-0 items-center gap-3">
                         <button
@@ -59,9 +60,10 @@
                     <div class="flex items-center gap-2 sm:gap-3">
                         <button
                             type="button"
-                            onclick="document.documentElement.classList.toggle('dark')"
+                            onclick="window.SpeechClinicTheme.toggle()"
                             class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-surface-border text-text-muted transition hover:bg-surface-muted hover:text-text focus:outline-none focus:ring-2 focus:ring-primary"
-                            aria-label="تبديل الوضع الليلي">
+                            aria-label="التبديل بين الوضع الفاتح والداكن"
+                            title="تبديل المظهر">
                             <svg class="h-5 w-5 dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                             </svg>
@@ -112,7 +114,7 @@
                 </div>
             </nav>
 
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6">
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                 {{ $slot }}
             </main>
         </div>

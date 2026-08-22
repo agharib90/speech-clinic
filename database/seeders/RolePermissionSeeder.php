@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RolePermissionSeeder extends Seeder
 {
@@ -17,7 +17,7 @@ class RolePermissionSeeder extends Seeder
             // الحضور والانصراف
             'manage checkins', 'view checkins',
             // المواعيد
-            'view appointments', 'create appointments', 'edit appointments', 'delete appointments',
+            'view appointments', 'create appointments', 'create legacy appointments', 'edit appointments', 'delete appointments',
             // البرامج والجلسات العلاجية
             'view therapy', 'create therapy', 'edit therapy', 'delete therapy',
             // التطور والواجبات
@@ -26,6 +26,10 @@ class RolePermissionSeeder extends Seeder
             'view finance', 'manage invoices', 'manage quotations', 'manage packages',
             // الكوادر والرواتب
             'view hr', 'manage therapists', 'manage payroll',
+            // التخصصات والخدمات واستحقاقات الأخصائيين
+            'manage specialties', 'manage services', 'manage therapist services',
+            // خطط خدمات المرضى وخصومات العملاء
+            'manage patient service plans', 'manage patient discounts',
             // المخزن والموردون
             'manage inventory', 'manage suppliers',
             // التقارير والإعدادات
@@ -34,14 +38,14 @@ class RolePermissionSeeder extends Seeder
 
         // إنشاء الصلاحيات في قاعدة البيانات
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         // ٢. تعريف الأدوار (Roles)
-        $adminRole = Role::create(['name' => 'مدير النظام']);
-        $financeRole = Role::create(['name' => 'مسؤول مالي']);
-        $receptionRole = Role::create(['name' => 'موظف استقبال']);
-        $therapistRole = Role::create(['name' => 'أخصائي تخاطب']);
+        $adminRole = Role::firstOrCreate(['name' => 'مدير النظام', 'guard_name' => 'web']);
+        $financeRole = Role::firstOrCreate(['name' => 'مسؤول مالي', 'guard_name' => 'web']);
+        $receptionRole = Role::firstOrCreate(['name' => 'موظف استقبال', 'guard_name' => 'web']);
+        $therapistRole = Role::firstOrCreate(['name' => 'أخصائي تخاطب', 'guard_name' => 'web']);
 
         // ٣. توزيع الصلاحيات على الأدوار
 

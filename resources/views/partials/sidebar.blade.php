@@ -1,5 +1,5 @@
 <!-- Sidebar Container -->
-<aside class="h-full w-72 lg:w-64 bg-surface-elevated border-l border-surface-border flex flex-col shadow-xl lg:shadow-none transition-all duration-300">
+<aside class="flex h-full w-72 flex-col border-l border-surface-border bg-surface-elevated transition-colors duration-150 lg:w-64">
 
     <!-- Logo / Brand -->
     <div class="h-16 flex items-center border-b border-surface-border px-6">
@@ -24,7 +24,7 @@
     </div>
 
 <!-- Navigation Links -->
-<nav class="flex-1 overflow-y-auto py-4 px-4 space-y-2">
+<nav class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
 
     <!-- الروابط الأساسية -->
     <div class="px-3 pt-1 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">الرئيسية</div>
@@ -103,7 +103,7 @@
     @endcan
 
     <!-- الكوادر والرواتب -->
-    @if(auth()->user()->can('view hr') || auth()->user()->can('manage inventory') || auth()->user()->can('manage settings') || auth()->user()->hasRole('مدير النظام'))
+    @if(auth()->user()->can('view hr') || auth()->user()->can('manage specialties') || auth()->user()->can('manage services') || auth()->user()->can('manage inventory') || auth()->user()->can('manage settings') || auth()->user()->hasRole('مدير النظام'))
     <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">الإدارة</div>
     @endif
 
@@ -116,6 +116,20 @@
     <x-nav-link :href="route('payroll.index')" :active="request()->is('payroll*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
         <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
         <span>الكوادر والرواتب</span>
+    </x-nav-link>
+    @endcan
+
+    @can('manage specialties')
+    <x-nav-link :href="route('specialties.index')" :active="request()->is('specialties*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
+        <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-3-3v6m8-3a8 8 0 11-16 0 8 8 0 0116 0z" /></svg>
+        <span>التخصصات</span>
+    </x-nav-link>
+    @endcan
+
+    @can('manage services')
+    <x-nav-link :href="route('services.index')" :active="request()->is('services*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
+        <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a3 3 0 006 0M9 12h6m-6 4h6" /></svg>
+        <span>الخدمات العلاجية</span>
     </x-nav-link>
     @endcan
 

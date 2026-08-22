@@ -13,6 +13,8 @@
 
         <title>{{ $clinicName }}</title>
 
+        @include('partials.theme-init')
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=ibm-plex-sans-arabic:400,500,600,700|inter:400,500,600,700&display=swap" rel="stylesheet" />

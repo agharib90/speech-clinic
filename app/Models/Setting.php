@@ -20,6 +20,7 @@ class Setting extends Model
         'currency_code',
         'currency_symbol',
         'default_therapist_commission_rate',
+        'appointment_confirmation_deposit_percentage',
         'appointment_reminders_enabled',
         'appointment_reminder_hours',
         'invoice_notifications_enabled',
@@ -34,6 +35,7 @@ class Setting extends Model
     protected $casts = [
         'working_hours' => 'array',
         'default_therapist_commission_rate' => 'decimal:2',
+        'appointment_confirmation_deposit_percentage' => 'integer',
         'appointment_reminders_enabled' => 'boolean',
         'appointment_reminder_hours' => 'integer',
         'invoice_notifications_enabled' => 'boolean',
@@ -48,6 +50,7 @@ class Setting extends Model
             'currency_code' => 'EGP',
             'currency_symbol' => 'ج.م',
             'default_therapist_commission_rate' => 0,
+            'appointment_confirmation_deposit_percentage' => 50,
             'appointment_reminders_enabled' => false,
             'appointment_reminder_hours' => 24,
             'invoice_notifications_enabled' => false,

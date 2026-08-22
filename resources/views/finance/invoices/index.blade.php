@@ -21,7 +21,7 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 @foreach ($invoices as $invoice)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-600">
-                    <td class="px-6 py-4 font-mono text-sm text-gray-900 dark:text-white">{{ $invoice->invoice_number }}</td>
+                    <td class="px-6 py-4 font-mono text-sm text-gray-900 dark:text-white"><a href="{{ route('invoices.show', $invoice) }}" class="clinic-entity-link">{{ $invoice->invoice_number }}</a></td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $invoice->patient->name ?? 'محذوف' }}</td>
 
                     <!-- التعديل هنا: استبدال ر.س بالمتغير الديناميكي -->
@@ -38,7 +38,6 @@
                     </td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $invoice->issue_date }}</td>
                     <td class="px-6 py-4 space-x-reverse space-x-2">
-                        <a href="{{ route('invoices.show', $invoice) }}" class="text-blue-600 hover:underline dark:text-blue-400">عرض</a>
                         <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="text-purple-600 hover:underline dark:text-purple-400">PDF</a>
                     </td>
                 </tr>

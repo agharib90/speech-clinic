@@ -6,6 +6,8 @@ use App\Http\Requests\StoreAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\PackageUsage;
 use App\Models\Patient;
+use App\Models\PatientServicePlan;
+use App\Models\PatientServicePlanItem;
 use App\Models\SessionPackage;
 use App\Models\SessionType;
 use App\Models\Therapist;
@@ -13,9 +15,13 @@ use App\Models\TherapistEarning;
 use App\Models\TherapyProgram;
 use App\Models\TherapySession;
 use App\Models\User;
+use App\Services\AppointmentServicePlanBookingService;
+use App\Services\PatientServicePlanAllocator;
+use App\Support\PatientWorkspaceContext;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
@@ -24,16 +30,23 @@ class AppointmentController extends Controller
         $user = $request->user();
         $dateFilter = $request->input('date', today()->format('Y-m-d'));
         $therapistFilter = $request->input('therapist_id');
+        $requestedPatientId = $request->integer('patient_id');
 
         if ($user->hasRole('أخصائي تخاطب')) {
             $therapistFilter = $user->id;
         }
 
-        $appointments = Appointment::with('patient', 'therapist', 'sessionType')
+        $appointments = Appointment::with(
+            'patient',
+            'therapist',
+            'sessionType',
+            'patientServicePlanItem.service.specialty'
+        )
             ->whereDate('scheduled_at', $dateFilter)
             ->when($therapistFilter, function ($query) use ($therapistFilter) {
                 $query->where('therapist_id', $therapistFilter);
             })
+            ->when($requestedPatientId, fn ($query) => $query->where('patient_id', $requestedPatientId))
             ->orderBy('scheduled_at')
             ->get();
 
@@ -50,18 +63,105 @@ class AppointmentController extends Controller
                         $programQuery->where('therapist_id', $user->id);
                     })->orWhereHas('appointments', function ($appointmentQuery) use ($user) {
                         $appointmentQuery->where('therapist_id', $user->id);
+                    })->orWhereHas('servicePlans.items.service.therapists', function ($therapistQuery) use ($user) {
+                        $therapistQuery->where('therapists.user_id', $user->id);
                     });
                 });
             })
             ->get();
+        $selectedPatientId = $patients->contains('id', $requestedPatientId) ? $requestedPatientId : null;
         $sessionTypes = SessionType::all();
+        $bookingService = app(AppointmentServicePlanBookingService::class);
+        $servicePlanItems = PatientServicePlanItem::query()
+            ->with([
+                'plan.patient',
+                'service.specialty',
+                'service.therapists' => fn ($query) => $query
+                    ->where('therapists.is_active', true)
+                    ->whereNotNull('therapists.user_id'),
+            ])
+            ->whereHas('plan', fn ($query) => $query
+                ->where('status', PatientServicePlan::STATUS_ACTIVE)
+                ->whereHas('patient', fn ($patientQuery) => $patientQuery->where('is_active', true)))
+            ->when($selectedPatientId, fn ($query) => $query
+                ->whereHas('plan', fn ($planQuery) => $planQuery->where('patient_id', $selectedPatientId)))
+            ->whereColumn('consumed_quantity', '<', 'planned_quantity')
+            ->get()
+            ->map(function (PatientServicePlanItem $item) use ($bookingService, $user) {
+                $eligibility = $bookingService->eligibility($item);
+                $therapists = $item->service->therapists
+                    ->when($user->hasRole('أخصائي تخاطب'), fn ($items) => $items->where('user_id', $user->id))
+                    ->map(fn (Therapist $therapist) => [
+                        'user_id' => $therapist->user_id,
+                        'name' => $therapist->name,
+                    ])
+                    ->values();
+                $financiallyEligible = $eligibility['can_book'];
+                $hasEligibleTherapist = $therapists->isNotEmpty();
+                $bookingState = match (true) {
+                    ! $financiallyEligible => 'الرصيد غير كافٍ لتأكيد الموعد',
+                    ! $hasEligibleTherapist => 'لا يوجد أخصائي مسند لهذه الخدمة',
+                    $eligibility['funding_type'] === 'full' => 'مدفوعة بالكامل',
+                    default => 'مقدم الحجز متاح',
+                };
 
-        return view('appointments.index', compact('appointments', 'therapists', 'patients', 'sessionTypes', 'dateFilter', 'therapistFilter'));
+                return [
+                    'id' => $item->id,
+                    'patient_id' => $item->plan->patient_id,
+                    'patient_name' => $item->plan->patient->name,
+                    'service_name' => $item->service->name,
+                    'specialty_name' => $item->service->specialty->name,
+                    'final_unit_price' => $item->final_unit_price,
+                    'required_deposit' => PatientServicePlanAllocator::centsToDecimal(
+                        $eligibility['required_deposit_cents']
+                    ),
+                    'financially_eligible' => $financiallyEligible,
+                    'has_eligible_therapist' => $hasEligibleTherapist,
+                    'can_book' => $financiallyEligible && $hasEligibleTherapist,
+                    'booking_state' => $bookingState,
+                    'therapists' => $therapists,
+                ];
+            })
+            ->values();
+
+        return view('appointments.index', compact(
+            'appointments',
+            'therapists',
+            'patients',
+            'sessionTypes',
+            'servicePlanItems',
+            'selectedPatientId',
+            'dateFilter',
+            'therapistFilter'
+        ));
     }
 
-    public function store(StoreAppointmentRequest $request)
-    {
+    public function store(
+        StoreAppointmentRequest $request,
+        AppointmentServicePlanBookingService $bookingService
+    ) {
         $validated = $request->validated();
+        $fromWorkspace = PatientWorkspaceContext::validate($request, (int) $validated['patient_id']);
+
+        if (! empty($validated['patient_service_plan_item_id'])) {
+            $appointment = $bookingService->book($validated);
+
+            if ($fromWorkspace) {
+                return redirect()->route('patients.workspace', $appointment->patient_id)
+                    ->with('success', 'تم حجز الموعد وتأكيده ماليًا بنجاح');
+            }
+
+            return redirect()->route('appointments.index', [
+                'date' => $appointment->scheduled_at->format('Y-m-d'),
+            ])->with('success', 'تم حجز الموعد وتأكيده ماليًا بنجاح');
+        }
+
+        abort_unless(
+            $request->user()->can('create appointments')
+                && $request->user()->can('create legacy appointments'),
+            403
+        );
+
         $scheduledAt = Carbon::parse($validated['scheduled_at']);
         $sessionType = SessionType::findOrFail($validated['session_type_id']);
         $endAt = $scheduledAt->copy()->addMinutes($sessionType->duration_minutes);
@@ -117,6 +217,13 @@ class AppointmentController extends Controller
     {
         return DB::transaction(function () use ($appointment) {
             $appointment = Appointment::whereKey($appointment->id)->lockForUpdate()->firstOrFail();
+
+            if ($appointment->patient_service_plan_item_id) {
+                throw ValidationException::withMessages([
+                    'status' => 'إتمام خدمات خطط المرضى سيتم من خلال مسار تنفيذ الخدمة المخصص، ولا يمكن إتمام هذا الموعد بالطريقة القديمة.',
+                ]);
+            }
+
             $appointment->load('sessionType');
 
             $appointment->update(['status' => 'مكتمل']);

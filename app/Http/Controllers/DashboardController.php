@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
-use App\Models\PatientCheckin;
-use App\Models\InvoicePayment;
 use App\Models\Invoice;
+use App\Models\InvoicePayment;
+use App\Models\PatientCheckin;
 
 class DashboardController extends Controller
 {
@@ -19,7 +19,6 @@ class DashboardController extends Controller
         }
 
         abort_unless($user->can('view reports'), 403);
-
 
         // ١. إحصائيات اليوم
         $todayAppointments = Appointment::whereDate('scheduled_at', today())->count();
@@ -35,7 +34,7 @@ class DashboardController extends Controller
             ->count();
 
         // ٣. مواعيد اليوم القادمة (لعرضها في الجدول)
-        $upcomingAppointments = Appointment::with('patient', 'therapist', 'sessionType')
+        $upcomingAppointments = Appointment::with('patient', 'therapist', 'sessionType', 'patientServicePlanItem.service')
             ->whereDate('scheduled_at', today())
             ->where('status', 'مجدول')
             ->orderBy('scheduled_at')

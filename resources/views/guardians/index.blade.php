@@ -29,12 +29,11 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 @foreach ($guardians as $guardian)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-600">
-                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ $guardian->name }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><a href="{{ route('guardians.show', $guardian) }}" class="clinic-entity-link">{{ $guardian->name }}</a></td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $guardian->phone }}</td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $guardian->national_id }}</td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $guardian->patients->count() }}</td>
                     <td class="px-6 py-4 space-x-reverse space-x-2">
-                        <a href="{{ route('guardians.show', $guardian) }}" class="text-blue-600 hover:underline">عرض</a>
                         <a href="{{ route('guardians.edit', $guardian) }}" class="text-yellow-600 hover:underline">تعديل</a>
                         <form action="{{ route('guardians.destroy', $guardian) }}" method="POST" class="inline" onsubmit="return confirm('هل أنت متأكد من الحذف؟');">
                             @csrf @method('DELETE')

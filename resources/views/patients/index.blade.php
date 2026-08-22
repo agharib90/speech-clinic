@@ -30,7 +30,7 @@
             <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
                 @foreach ($patients as $patient)
                 <tr class="hover:bg-gray-50 dark:hover:bg-gray-600">
-                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white">{{ $patient->name }}</td>
+                    <td class="px-6 py-4 font-medium text-gray-900 dark:text-white"><a href="{{ route('patients.workspace', $patient) }}" class="clinic-entity-link">{{ $patient->name }}</a></td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $patient->guardian->name ?? 'غير محدد' }}</td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $patient->birth_date->age }} سنة</td>
                     <td class="px-6 py-4 text-gray-600 dark:text-gray-300">{{ $patient->diagnosis }}</td>
@@ -40,7 +40,6 @@
                         </span>
                     </td>
                     <td class="px-6 py-4 space-x-reverse space-x-2">
-                        <a href="{{ route('patients.show', $patient) }}" class="text-blue-600 hover:underline">عرض</a>
                         <a href="{{ route('patients.edit', $patient) }}" class="text-yellow-600 hover:underline">تعديل</a>
                         <a href="{{ route('patients.print-card', $patient) }}" target="_blank" class="text-green-600 hover:underline">بطاقة</a>
                         <form action="{{ route('patients.destroy', $patient) }}" method="POST" class="inline" onsubmit="return confirm('هل أنت متأكد من حذف هذا المريض؟');">

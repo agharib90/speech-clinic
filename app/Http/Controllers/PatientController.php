@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Patient;
-use App\Models\Guardian;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
+use App\Models\Guardian;
+use App\Models\Patient;
+use App\Services\PatientWorkspaceBuilder;
+use App\Support\PatientAccess;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -16,7 +18,7 @@ class PatientController extends Controller
     {
         $search = $request->input('search');
         $query = Patient::with('guardian');
-        $this->scopePatientsForCurrentUser($query);
+        PatientAccess::scope($query, $request->user());
 
         $patients = $query
             ->when($search, function ($query) use ($search) {
@@ -36,6 +38,7 @@ class PatientController extends Controller
     {
         // جلب أولياء الأمور لاختيار أحدهم عند إنشاء المريض
         $guardians = Guardian::pluck('name', 'id');
+
         return view('patients.create', compact('guardians'));
     }
 
@@ -46,11 +49,11 @@ class PatientController extends Controller
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
 
         DB::transaction(function () use ($data) {
-            $data['barcode'] = 'TMP-' . Str::uuid();
+            $data['barcode'] = 'TMP-'.Str::uuid();
             $data['qr_code'] = $data['barcode'];
 
             $patient = Patient::create($data);
-            $barcode = 'PAT-' . str_pad($patient->id, 5, '0', STR_PAD_LEFT);
+            $barcode = 'PAT-'.str_pad($patient->id, 5, '0', STR_PAD_LEFT);
 
             $patient->update([
                 'barcode' => $barcode,
@@ -64,23 +67,34 @@ class PatientController extends Controller
 
     public function show(Patient $patient)
     {
-        $this->authorizePatientAccess($patient);
+        PatientAccess::authorize($patient, auth()->user());
 
         $patient->load('guardian', 'caseHistory.takenBy', 'therapyPrograms.therapist');
+
         return view('patients.show', compact('patient'));
+    }
+
+    public function workspace(Patient $patient, PatientWorkspaceBuilder $workspaceBuilder)
+    {
+        PatientAccess::authorize($patient, auth()->user());
+
+        $workspace = $workspaceBuilder->build($patient, auth()->user());
+
+        return view('patients.workspace', compact('patient', 'workspace'));
     }
 
     public function edit(Patient $patient)
     {
-        $this->authorizePatientAccess($patient);
+        PatientAccess::authorize($patient, auth()->user());
 
         $guardians = Guardian::pluck('name', 'id');
+
         return view('patients.edit', compact('patient', 'guardians'));
     }
 
     public function update(UpdatePatientRequest $request, Patient $patient)
     {
-        $this->authorizePatientAccess($patient);
+        PatientAccess::authorize($patient, auth()->user());
 
         $data = $request->validated();
         $data['is_active'] = $request->has('is_active') ? 1 : 0;
@@ -93,9 +107,10 @@ class PatientController extends Controller
 
     public function destroy(Patient $patient)
     {
-        $this->authorizePatientAccess($patient);
+        PatientAccess::authorize($patient, auth()->user());
 
         $patient->delete();
+
         return redirect()->route('patients.index')
             ->with('success', 'تم حذف الطفل بنجاح');
     }
@@ -103,44 +118,10 @@ class PatientController extends Controller
     // دالة طباعة البطاقة
     public function printCard(Patient $patient)
     {
-        $this->authorizePatientAccess($patient);
+        PatientAccess::authorize($patient, auth()->user());
 
         $patient->load('guardian');
+
         return view('patients.print-card', compact('patient'));
-    }
-
-    private function scopePatientsForCurrentUser($query): void
-    {
-        $user = auth()->user();
-
-        if (! $user?->hasRole('أخصائي تخاطب')) {
-            return;
-        }
-
-        $query->where(function ($patientQuery) use ($user) {
-            $patientQuery->whereHas('therapyPrograms', function ($programQuery) use ($user) {
-                $programQuery->where('therapist_id', $user->id);
-            })->orWhereHas('appointments', function ($appointmentQuery) use ($user) {
-                $appointmentQuery->where('therapist_id', $user->id);
-            });
-        });
-    }
-
-    private function authorizePatientAccess(Patient $patient): void
-    {
-        $user = auth()->user();
-
-        if (! $user?->hasRole('أخصائي تخاطب')) {
-            return;
-        }
-
-        $hasAccess = $patient->therapyPrograms()
-            ->where('therapist_id', $user->id)
-            ->exists()
-            || $patient->appointments()
-                ->where('therapist_id', $user->id)
-                ->exists();
-
-        abort_unless($hasAccess, 403);
     }
 }

@@ -4,9 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\ClinicalProgressPoint;
+use App\Models\HomeTask;
 use App\Models\SessionPackage;
-use App\Models\TherapyProgram;
 use App\Models\TherapistEarning;
+use App\Models\TherapyProgram;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -44,7 +45,7 @@ class TherapistDashboardController extends Controller
         // ── مواعيد اليوم (مرتبة بالوقت) ──────────────────────────────────
         $todaySchedule = Appointment::where('therapist_id', $user->id)
             ->whereDate('scheduled_at', today())
-            ->with('patient', 'sessionType')
+            ->with('patient', 'sessionType', 'patientServicePlanItem.service')
             ->orderBy('scheduled_at')
             ->get();
 
@@ -52,7 +53,7 @@ class TherapistDashboardController extends Controller
         $upcomingAppointments = Appointment::where('therapist_id', $user->id)
             ->whereDate('scheduled_at', '>', today())
             ->where('status', 'مجدول')
-            ->with('patient', 'sessionType')
+            ->with('patient', 'sessionType', 'patientServicePlanItem.service')
             ->orderBy('scheduled_at')
             ->take(5)
             ->get();
@@ -62,8 +63,8 @@ class TherapistDashboardController extends Controller
             ->where('status', 'جاري')
             ->with([
                 'patient',
-                'sessions' => fn($q) => $q->latest()->take(1),
-                'milestones' => fn($q) => $q->latest()->take(1),
+                'sessions' => fn ($q) => $q->latest()->take(1),
+                'milestones' => fn ($q) => $q->latest()->take(1),
             ])
             ->latest()
             ->get()
@@ -102,7 +103,7 @@ class TherapistDashboardController extends Controller
                 ->where('status', 'ملغى')
                 ->count(),
 
-            'earnings' => TherapistEarning::whereHas('therapist', fn($q) => $q->where('user_id', $user->id))
+            'earnings' => TherapistEarning::whereHas('therapist', fn ($q) => $q->where('user_id', $user->id))
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->sum('amount'),
@@ -115,7 +116,7 @@ class TherapistDashboardController extends Controller
             : 0;
 
         // ── آخر الواجبات المنزلية التي تحتاج متابعة ──────────────────────
-        $pendingTasks = \App\Models\HomeTask::whereHas('session.program', function ($q) use ($user) {
+        $pendingTasks = HomeTask::whereHas('session.program', function ($q) use ($user) {
             $q->where('therapist_id', $user->id);
         })
             ->where('is_completed', false)

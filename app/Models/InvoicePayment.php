@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class InvoicePayment extends Model
 {
@@ -13,5 +14,10 @@ class InvoicePayment extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function servicePlanPayment(): HasOne
+    {
+        return $this->hasOne(PatientServicePlanPayment::class);
     }
 }

@@ -12,19 +12,24 @@ use App\Http\Controllers\HomeTaskController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MilestoneController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PatientServicePlanController;
 use App\Http\Controllers\PayrollController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgramAttachmentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReceptionController;
+use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SessionPackageController;
 use App\Http\Controllers\SettingController;
+use App\Http\Controllers\SpecialtyController;
 use App\Http\Controllers\StutteringAssessmentController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TherapistController;
 use App\Http\Controllers\TherapistDashboardController;
+use App\Http\Controllers\TherapistServiceController;
 use App\Http\Controllers\TherapyProgramController;
 use App\Http\Controllers\TrashController;
+use App\Http\Controllers\Usercontroller;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -50,6 +55,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('permission:view patients')->group(function () {
         Route::resource('guardians', GuardianController::class)->only(['index', 'show']);
+        Route::get('patients/{patient}/workspace', [PatientController::class, 'workspace'])->name('patients.workspace');
         Route::resource('patients', PatientController::class)->only(['index', 'show']);
         Route::get('patients/{patient}/print-card', [PatientController::class, 'printCard'])->name('patients.print-card');
     });
@@ -90,16 +96,18 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:edit appointments')
         ->name('appointments.convert');
 
+    Route::middleware('permission:manage invoices')->group(function () {
+        Route::resource('invoices', InvoiceController::class)->only(['create', 'store']);
+        Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments');
+    });
+
     Route::middleware('permission:view finance')->group(function () {
         Route::resource('invoices', InvoiceController::class)->only(['index', 'show']);
         Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'printPdf'])->name('invoices.pdf');
         Route::resource('quotations', QuotationController::class)->only(['index']);
         Route::resource('packages', SessionPackageController::class)->only(['index']);
     });
-    Route::middleware('permission:manage invoices')->group(function () {
-        Route::resource('invoices', InvoiceController::class)->only(['create', 'store']);
-        Route::post('invoices/{invoice}/payments', [InvoiceController::class, 'addPayment'])->name('invoices.payments');
-    });
+
     Route::middleware('permission:manage quotations')->group(function () {
         Route::resource('quotations', QuotationController::class)->only(['create', 'store']);
         Route::post('quotations/{quotation}/convert', [QuotationController::class, 'convertToInvoice'])->name('quotations.convert');
@@ -122,6 +130,42 @@ Route::middleware('auth')->group(function () {
     Route::post('/therapists/attendance', [TherapistController::class, 'markAttendance'])
         ->middleware('permission:manage therapists')
         ->name('therapists.attendance');
+    Route::middleware('permission:manage therapist services')->group(function () {
+        Route::get('/therapists/{therapist}/services', [TherapistServiceController::class, 'edit'])
+            ->name('therapists.services.edit');
+        Route::put('/therapists/{therapist}/services', [TherapistServiceController::class, 'update'])
+            ->name('therapists.services.update');
+    });
+    Route::middleware('permission:manage specialties')->group(function () {
+        Route::resource('specialties', SpecialtyController::class)->except(['show', 'destroy']);
+        Route::patch('/specialties/{specialty}/toggle-active', [SpecialtyController::class, 'toggleActive'])
+            ->name('specialties.toggle-active');
+    });
+    Route::middleware('permission:manage services')->group(function () {
+        Route::resource('services', ServiceController::class)->except(['show', 'destroy']);
+        Route::patch('/services/{service}/toggle-active', [ServiceController::class, 'toggleActive'])
+            ->name('services.toggle-active');
+    });
+    Route::middleware('permission:manage patient service plans')->group(function () {
+        Route::get('/patients/{patient}/service-plans', [PatientServicePlanController::class, 'index'])
+            ->name('patients.service-plans.index');
+        Route::get('/patients/{patient}/service-plans/create', [PatientServicePlanController::class, 'create'])
+            ->name('patients.service-plans.create');
+        Route::post('/patients/{patient}/service-plans', [PatientServicePlanController::class, 'store'])
+            ->name('patients.service-plans.store');
+        Route::get('/patient-service-plans/{patientServicePlan}', [PatientServicePlanController::class, 'show'])
+            ->name('patient-service-plans.show');
+        Route::get('/patient-service-plans/{patientServicePlan}/edit', [PatientServicePlanController::class, 'edit'])
+            ->name('patient-service-plans.edit');
+        Route::put('/patient-service-plans/{patientServicePlan}', [PatientServicePlanController::class, 'update'])
+            ->name('patient-service-plans.update');
+        Route::delete('/patient-service-plans/{patientServicePlan}', [PatientServicePlanController::class, 'destroy'])
+            ->name('patient-service-plans.destroy');
+        Route::post('/patient-service-plans/{patientServicePlan}/activate', [PatientServicePlanController::class, 'activate'])
+            ->name('patient-service-plans.activate');
+        Route::post('/patient-service-plans/{patientServicePlan}/allocate-payment', [PatientServicePlanController::class, 'allocatePayment'])
+            ->name('patient-service-plans.allocate-payment');
+    });
 
     Route::resource('equipment', EquipmentController::class)
         ->only(['index', 'store'])
@@ -165,11 +209,11 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::middleware(['role:مدير النظام'])->group(function () {
-        Route::resource('users', \App\Http\Controllers\Usercontroller::class)
+        Route::resource('users', Usercontroller::class)
             ->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
-        Route::post('/users/{user}/toggle-active', [\App\Http\Controllers\Usercontroller::class, 'toggleActive'])
+        Route::post('/users/{user}/toggle-active', [Usercontroller::class, 'toggleActive'])
             ->name('users.toggle-active');
-        Route::post('/users/{user}/reset-password', [\App\Http\Controllers\Usercontroller::class, 'resetPassword'])
+        Route::post('/users/{user}/reset-password', [Usercontroller::class, 'resetPassword'])
             ->name('users.reset-password');
     });
 });

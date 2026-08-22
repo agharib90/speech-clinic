@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Appointment extends Model
@@ -11,7 +12,17 @@ class Appointment extends Model
 
     protected $fillable = [
         'patient_id', 'therapist_id', 'session_type_id', 'scheduled_at',
-        'end_at', 'status', 'notes'
+        'patient_service_plan_item_id', 'confirmation_deposit_percentage_snapshot',
+        'confirmation_deposit_amount_snapshot', 'financially_confirmed_at',
+        'end_at', 'status', 'notes', 'legacy_booking_reason',
+    ];
+
+    protected $casts = [
+        'scheduled_at' => 'datetime',
+        'end_at' => 'datetime',
+        'confirmation_deposit_percentage_snapshot' => 'integer',
+        'confirmation_deposit_amount_snapshot' => 'decimal:2',
+        'financially_confirmed_at' => 'datetime',
     ];
 
     // الموعد لمريض واحد
@@ -30,6 +41,11 @@ class Appointment extends Model
     public function sessionType()
     {
         return $this->belongsTo(SessionType::class);
+    }
+
+    public function patientServicePlanItem(): BelongsTo
+    {
+        return $this->belongsTo(PatientServicePlanItem::class);
     }
 
     // الموعد ممكن يكون له سجل حضور

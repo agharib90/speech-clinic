@@ -4,67 +4,67 @@
 
 @layer base {
     :root {
-        --color-primary: #155e5a;
-        --color-primary-hover: #104b48;
-        --color-primary-soft: #e2f0ee;
+        --color-primary: #0f766e;
+        --color-primary-hover: #115e59;
+        --color-primary-soft: #f0fdfa;
         --color-primary-contrast: #ffffff;
-        --color-accent: #c78326;
-        --color-accent-hover: #9f671d;
-        --color-accent-soft: #f6ead4;
-        --color-accent-contrast: #1f2f2e;
-        --color-success: #2f7d63;
-        --color-success-hover: #25664f;
-        --color-success-soft: #e2f2eb;
+        --color-accent: #d97706;
+        --color-accent-hover: #b45309;
+        --color-accent-soft: #fffbeb;
+        --color-accent-contrast: #0f172a;
+        --color-success: #15803d;
+        --color-success-hover: #166534;
+        --color-success-soft: #dcfce7;
         --color-success-contrast: #ffffff;
-        --color-warning: #b7791f;
-        --color-warning-hover: #925f18;
-        --color-warning-soft: #f7edd6;
-        --color-warning-contrast: #20150a;
-        --color-danger: #b24a42;
-        --color-danger-hover: #943a34;
-        --color-danger-soft: #f5e2df;
+        --color-warning: #b45309;
+        --color-warning-hover: #92400e;
+        --color-warning-soft: #fef3c7;
+        --color-warning-contrast: #0f172a;
+        --color-danger: #b91c1c;
+        --color-danger-hover: #991b1b;
+        --color-danger-soft: #fee2e2;
         --color-danger-contrast: #ffffff;
-        --color-surface: #f7f3ec;
-        --color-surface-elevated: #fffdfa;
-        --color-surface-muted: #eee6da;
-        --color-surface-border: #dbd0be;
-        --color-surface-overlay: rgb(20 31 38 / 0.46);
-        --color-text: #203332;
-        --color-text-muted: #61706c;
-        --color-text-subtle: #87908b;
-        --color-text-inverted: #fffdfa;
+        --color-surface: #f8fafc;
+        --color-surface-elevated: #ffffff;
+        --color-surface-muted: #f8fafc;
+        --color-surface-border: #e2e8f0;
+        --color-surface-overlay: rgb(15 23 42 / 0.48);
+        --color-text: #0f172a;
+        --color-text-muted: #64748b;
+        --color-text-subtle: #94a3b8;
+        --color-text-inverted: #f8fafc;
     }
 
     .dark {
-        --color-primary: #63beb6;
-        --color-primary-hover: #86d1cb;
-        --color-primary-soft: #173b3b;
-        --color-primary-contrast: #0e2026;
-        --color-accent: #e2a64b;
-        --color-accent-hover: #f0bb68;
-        --color-accent-soft: #4a3218;
-        --color-accent-contrast: #142027;
-        --color-success: #72c59d;
-        --color-success-hover: #8dd8b4;
-        --color-success-soft: #1e3e35;
-        --color-success-contrast: #102027;
-        --color-warning: #d69b35;
-        --color-warning-hover: #eab558;
-        --color-warning-soft: #493417;
-        --color-warning-contrast: #141f26;
-        --color-danger: #dc746b;
-        --color-danger-hover: #eb928a;
-        --color-danger-soft: #4c2527;
-        --color-danger-contrast: #141f26;
-        --color-surface: #101f27;
-        --color-surface-elevated: #172a33;
-        --color-surface-muted: #213741;
-        --color-surface-border: #36525c;
-        --color-surface-overlay: rgb(8 18 24 / 0.68);
-        --color-text: #f4efe7;
-        --color-text-muted: #b8c7c2;
-        --color-text-subtle: #889c98;
-        --color-text-inverted: #101f27;
+        --color-primary: #2dd4bf;
+        --color-primary-hover: #5eead4;
+        --color-primary-soft: rgb(20 184 166 / 0.12);
+        --color-primary-contrast: #0b1220;
+        --color-accent: #f59e0b;
+        --color-accent-hover: #fbbf24;
+        --color-accent-soft: rgb(245 158 11 / 0.12);
+        --color-accent-contrast: #f8fafc;
+        --color-success: #4ade80;
+        --color-success-hover: #86efac;
+        --color-success-soft: rgb(34 197 94 / 0.12);
+        --color-success-contrast: #0b1220;
+        --color-warning: #fbbf24;
+        --color-warning-hover: #fcd34d;
+        --color-warning-soft: rgb(245 158 11 / 0.12);
+        --color-warning-contrast: #0b1220;
+        --color-danger: #f87171;
+        --color-danger-hover: #fca5a5;
+        --color-danger-soft: rgb(239 68 68 / 0.12);
+        --color-danger-contrast: #0b1220;
+        --color-surface: #0b1220;
+        --color-surface-elevated: #111827;
+        --color-surface-muted: #172033;
+        --color-surface-border: #243244;
+        --color-surface-overlay: rgb(2 6 23 / 0.72);
+        --color-text: #f8fafc;
+        --color-text-muted: #cbd5e1;
+        --color-text-subtle: #94a3b8;
+        --color-text-inverted: #0b1220;
     }
 
     html {
@@ -74,6 +74,7 @@
     body {
         background-color: var(--color-surface);
         color: var(--color-text);
+        line-height: 1.65;
         text-rendering: optimizeLegibility;
     }
 
@@ -89,11 +90,48 @@
 
 @layer components {
     .clinic-card {
-        @apply rounded-lg border border-surface-border bg-surface-elevated shadow-sm;
+        @apply rounded-[15px] border border-surface-border bg-surface-elevated;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 12px rgb(15 23 42 / 0.035);
     }
 
     .clinic-field {
-        @apply rounded-lg border-surface-border bg-surface-elevated text-text shadow-sm focus:border-primary focus:ring-primary;
+        @apply min-h-11 rounded-[10px] border-surface-border bg-surface-elevated text-text shadow-sm transition duration-150 placeholder:text-text-subtle focus:border-primary focus:ring-2 focus:ring-primary;
+    }
+
+    .clinic-btn-primary {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast transition duration-150 hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface active:translate-y-px;
+    }
+
+    .clinic-btn-secondary {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-surface-border bg-surface-elevated px-4 py-2 text-sm font-medium text-text transition duration-150 hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-surface;
+    }
+
+    .clinic-btn-danger-soft {
+        @apply inline-flex min-h-10 items-center justify-center gap-2 rounded-[10px] border border-danger bg-transparent px-4 py-2 text-sm font-medium text-danger transition duration-150 hover:bg-danger-soft focus:outline-none focus:ring-2 focus:ring-danger;
+    }
+
+    .clinic-entity-link {
+        @apply rounded-sm font-semibold text-inherit underline-offset-4 transition duration-150 hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+    }
+
+    .clinic-table {
+        @apply min-w-full divide-y divide-surface-border text-sm;
+    }
+
+    .clinic-table thead {
+        @apply bg-surface-muted text-text-muted;
+    }
+
+    .clinic-table th {
+        @apply px-4 py-3 text-xs font-semibold;
+    }
+
+    .clinic-table tbody {
+        @apply divide-y divide-surface-border;
+    }
+
+    .clinic-table tbody tr {
+        @apply transition duration-150 hover:bg-primary-soft;
     }
 
     .clinic-soundwave {
@@ -118,5 +156,63 @@
 
     .clinic-soundwave span:nth-child(3) {
         height: 1.35rem;
+    }
+
+    .patient-workspace {
+        --color-primary: #2dd4bf;
+        --color-primary-hover: #5eead4;
+        --color-primary-soft: rgb(45 212 191 / 0.1);
+        --color-primary-contrast: #07111f;
+        --color-success: #4ade80;
+        --color-success-soft: rgb(74 222 128 / 0.1);
+        --color-warning: #fbbf24;
+        --color-warning-soft: rgb(251 191 36 / 0.1);
+        --color-danger: #f87171;
+        --color-danger-soft: rgb(248 113 113 / 0.1);
+        --color-surface: #07111f;
+        --color-surface-elevated: #0d1929;
+        --color-surface-muted: #132238;
+        --color-surface-border: #22344a;
+        --color-text: #f8fafc;
+        --color-text-muted: #b7c4d4;
+        --color-text-subtle: #7f91a8;
+        background: var(--color-surface);
+        color: var(--color-text);
+    }
+
+    .workspace-hero {
+        background: #0b1727;
+        box-shadow: 0 20px 55px rgb(0 0 0 / 0.22), inset 0 1px rgb(255 255 255 / 0.025);
+    }
+
+    .workspace-card {
+        @apply rounded-lg border border-surface-border bg-surface-elevated;
+        box-shadow: 0 14px 36px rgb(0 0 0 / 0.16), inset 0 1px rgb(255 255 255 / 0.02);
+    }
+
+    .workspace-action {
+        @apply flex min-h-[72px] items-center justify-center gap-2 rounded-lg border border-surface-border bg-surface-elevated px-3 py-3 text-sm font-semibold text-text transition duration-150 hover:border-primary hover:bg-primary-soft hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary;
+    }
+
+    .workspace-action small {
+        @apply text-[10px] font-normal text-text-subtle;
+    }
+
+    .workspace-action-disabled {
+        @apply cursor-not-allowed opacity-60;
+    }
+
+    .workspace-action-disabled:hover {
+        @apply border-surface-border bg-surface-elevated text-text;
+    }
+
+    .workspace-recommendation {
+        background: #0c1d2b;
+        box-shadow: inset 4px 0 var(--color-primary), 0 18px 45px rgb(0 0 0 / 0.17);
+    }
+
+    .workspace-context-bar {
+        background: rgb(13 25 41 / 0.96);
+        backdrop-filter: blur(14px);
     }
 }

@@ -94,7 +94,7 @@ class SettingController extends Controller
         if ($request->hasFile('logo')) {
             $file = $request->file('logo');
             $extension = $file->getClientOriginalExtension();
-            $storedName = (string) Str::uuid() . ($extension ? ".{$extension}" : '');
+            $storedName = (string) Str::uuid().($extension ? ".{$extension}" : '');
             $newLogoPath = $file->storeAs('settings/logos', $storedName, 'public');
 
             $data['logo_path'] = $newLogoPath;
@@ -114,6 +114,7 @@ class SettingController extends Controller
             'currency_code' => ['required', 'string', 'size:3', 'regex:/^[A-Z]{3}$/'],
             'currency_symbol' => ['required', 'string', 'max:10'],
             'default_therapist_commission_rate' => ['required', 'numeric', 'min:0', 'max:100'],
+            'appointment_confirmation_deposit_percentage' => ['required', 'integer', 'min:1', 'max:100'],
         ]);
 
         $data['currency'] = $data['currency_symbol'];
@@ -211,7 +212,7 @@ class SettingController extends Controller
 
         if ($unknown->isNotEmpty()) {
             throw ValidationException::withMessages([
-                $field => 'يحتوي القالب على متغير غير مسموح: ' . $unknown->implode(', '),
+                $field => 'يحتوي القالب على متغير غير مسموح: '.$unknown->implode(', '),
             ]);
         }
     }

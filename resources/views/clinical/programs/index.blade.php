@@ -69,7 +69,6 @@
                                 <th class="text-right px-5 py-3">الأخصائي</th>
                                 <th class="text-right px-5 py-3">التقدم</th>
                                 <th class="text-right px-5 py-3">الجلسات</th>
-                                <th class="text-right px-5 py-3"></th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -86,7 +85,7 @@
                                     </td>
                                     <td class="px-5 py-4">
                                         <div class="font-bold text-gray-900 dark:text-white">{{ $program->patient->name }}</div>
-                                        <div class="text-gray-500 dark:text-gray-400">{{ $program->name }} | {{ $program->disorder_type ?: 'غير محدد' }}</div>
+                                        <div class="text-gray-500 dark:text-gray-400"><a href="{{ route('programs.show', $program) }}" class="clinic-entity-link">{{ $program->name }}</a> | {{ $program->disorder_type ?: 'غير محدد' }}</div>
                                     </td>
                                     <td class="px-5 py-4 text-gray-700 dark:text-gray-300">
                                         {{ $program->therapist->name ?? 'غير محدد' }}
@@ -108,11 +107,6 @@
                                     </td>
                                     <td class="px-5 py-4 text-gray-700 dark:text-gray-300">
                                         {{ $program->sessions_count }} جلسة
-                                    </td>
-                                    <td class="px-5 py-4 text-left">
-                                        <a href="{{ route('programs.show', $program) }}" class="inline-flex items-center justify-center bg-gray-900 hover:bg-gray-700 text-white px-4 py-2 rounded-lg">
-                                            فتح
-                                        </a>
                                     </td>
                                 </tr>
                             @endforeach

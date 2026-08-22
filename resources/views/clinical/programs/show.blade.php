@@ -14,7 +14,10 @@
         </div>
 
         <!-- زر تحميل التقرير -->
-        <div class="flex-shrink-0">
+        <div class="flex flex-wrap gap-2">
+            @can('view patients')
+                <a href="{{ route('patients.workspace', $program->patient) }}" class="clinic-btn-secondary">رجوع إلى ملف الحالة</a>
+            @endcan
             <a href="{{ route('programs.progress-report', $program->id) }}"
                class="inline-flex items-center justify-center px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors shadow-sm">
                 <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

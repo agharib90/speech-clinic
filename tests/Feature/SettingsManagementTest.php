@@ -179,6 +179,7 @@ class SettingsManagementTest extends TestCase
                 'currency_code' => 'EGP',
                 'currency_symbol' => 'ج.م',
                 'default_therapist_commission_rate' => 35,
+                'appointment_confirmation_deposit_percentage' => 50,
             ])
             ->assertRedirect();
 
@@ -339,7 +340,7 @@ class SettingsManagementTest extends TestCase
             'name' => $name,
             'birth_date' => '2020-01-01',
             'gender' => 'male',
-            'barcode' => 'PAT-SET-' . uniqid(),
+            'barcode' => 'PAT-SET-'.uniqid(),
             'qr_code' => 'PAT-SET',
             'is_active' => true,
         ]);

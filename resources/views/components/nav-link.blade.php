@@ -2,8 +2,8 @@
 
 @php
 $classes = ($active ?? false)
-            ? 'flex items-center rounded-lg bg-primary-soft text-primary shadow-sm ring-1 ring-primary-soft focus:outline-none focus:ring-2 focus:ring-primary'
-            : 'flex items-center rounded-lg text-text-muted hover:bg-surface-muted hover:text-text focus:outline-none focus:ring-2 focus:ring-primary';
+            ? 'flex min-h-11 items-center rounded-[10px] bg-primary-soft font-semibold text-primary ring-1 ring-primary-soft focus:outline-none focus:ring-2 focus:ring-primary'
+            : 'flex min-h-11 items-center rounded-[10px] text-text-muted transition duration-150 hover:bg-primary-soft hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary';
 @endphp
 
 <a {{ $attributes->merge(['class' => $classes]) }}>

@@ -104,6 +104,7 @@
                                 <th class="px-5 py-3">اليوم / الشهر</th>
                                 <th class="px-5 py-3">نظام الراتب</th>
                                 <th class="px-5 py-3">الحالة</th>
+                                @can('manage therapist services')<th class="px-5 py-3">الخدمات</th>@endcan
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -167,6 +168,11 @@
                                             </span>
                                         @endif
                                     </td>
+                                    @can('manage therapist services')
+                                        <td class="px-5 py-4">
+                                            <a href="{{ route('therapists.services.edit', $therapist) }}" class="text-sm font-medium text-primary hover:text-primary-hover">الخدمات والاستحقاقات</a>
+                                        </td>
+                                    @endcan
                                 </tr>
                             @endforeach
                         </tbody>

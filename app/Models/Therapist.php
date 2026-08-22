@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Therapist extends Model
@@ -37,5 +39,20 @@ class Therapist extends Model
     public function payrollRecords()
     {
         return $this->hasMany(PayrollRecord::class);
+    }
+
+    public function specialties(): BelongsToMany
+    {
+        return $this->belongsToMany(Specialty::class)->withTimestamps();
+    }
+
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class)->withTimestamps();
+    }
+
+    public function serviceRates(): HasMany
+    {
+        return $this->hasMany(TherapistServiceRate::class);
     }
 }

@@ -15,11 +15,19 @@
                     <p class="text-gray-600 dark:text-gray-400">العمر: {{ $patient->birth_date->age }} سنة | التشخيص: {{ $patient->diagnosis }}</p>
                 </div>
                 <div class="flex space-x-reverse space-x-2">
+                    <a href="{{ route('patients.workspace', $patient) }}" class="clinic-btn-primary">ملف الحالة الذكي</a>
                     <a href="{{ route('patients.print-card', $patient) }}" target="_blank" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">طباعة البطاقة</a>
                     <a href="{{ route('patients.edit', $patient) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">تعديل</a>
                 </div>
             </div>
         </div>
+
+        @can('manage patient service plans')
+            <div class="clinic-card mb-6 flex flex-col justify-between gap-3 p-5 sm:flex-row sm:items-center">
+                <div><h3 class="font-bold text-text">خطة الخدمات</h3><p class="mt-1 text-sm text-text-muted">الخدمات المرتبة والأسعار والوحدات المدفوعة والرصيد النقدي.</p></div>
+                <a href="{{ route('patients.service-plans.index', $patient) }}" class="clinic-btn-primary">فتح خطط الخدمات</a>
+            </div>
+        @endcan
 
         <!-- قسم الباركود والـ QR Code -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">

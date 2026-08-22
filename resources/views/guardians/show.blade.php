@@ -10,7 +10,7 @@
                     <p class="text-gray-600 dark:text-gray-400 mt-2"><span class="font-bold">الهاتف:</span> {{ $guardian->phone }}</p>
                     <p class="text-gray-600 dark:text-gray-400"><span class="font-bold">الرقم الوطني:</span> {{ $guardian->national_id }}</p>
                 </div>
-                <a href="{{ route('guardians.edit', $guardian) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">تعديل البيانات</a>
+                <div class="flex flex-wrap gap-2"><a href="{{ route('guardians.index') }}" class="clinic-btn-secondary">رجوع</a><a href="{{ route('guardians.edit', $guardian) }}" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg">تعديل البيانات</a></div>
             </div>
         </div>
 

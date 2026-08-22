@@ -13,7 +13,7 @@
                     <p class="text-gray-500 dark:text-gray-400">المريض: {{ $invoice->patient->name }}</p>
                 </div>
             </div>
-            <a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg dark:bg-purple-500 dark:hover:bg-purple-600">تحميل PDF</a>
+            <div class="flex flex-wrap gap-2"><a href="{{ route('invoices.index') }}" class="clinic-btn-secondary">رجوع</a><a href="{{ route('invoices.pdf', $invoice) }}" target="_blank" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg dark:bg-purple-500 dark:hover:bg-purple-600">تحميل PDF</a></div>
         </div>
 
         <!-- عناصر الفاتورة -->

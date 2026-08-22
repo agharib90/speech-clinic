@@ -77,7 +77,7 @@ class PayrollController extends Controller
     // إضافة بدل أو خصم يدوي
     public function addRecord(Request $request)
     {
-        $request->validate([
+        $data = $request->validate([
             'therapist_id' => 'required|exists:therapists,id',
             'type' => 'required|in:إضافة,خصم',
             'amount' => 'required|numeric|min:0.01',

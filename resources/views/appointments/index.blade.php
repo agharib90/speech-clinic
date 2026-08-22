@@ -7,62 +7,37 @@
             {{ session('success') }}
         </div>
     @endif
+    @if($errors->any())
+        <div class="mb-4 rounded-lg border border-danger bg-danger-soft px-4 py-3 text-danger" role="alert">{{ $errors->first() }}</div>
+    @endif
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- القسم الأيمن: إضافة موعد جديد سريع -->
         <div class="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow h-fit">
-            <h2 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">حجز موعد جديد</h2>
+            <h2 class="mb-1 text-xl font-bold text-gray-800 dark:text-gray-200">حجز من خطة الخدمات</h2>
+            <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">يتطلب الحجز تغطية مالية مؤكدة في خطة المريض.</p>
 
-            <form action="{{ route('appointments.store') }}" method="POST">
-                @csrf
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">المريض *</label>
-                        <select name="patient_id" class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 @error('patient_id') border-red-500 @enderror" required>
-                            <option value="">اختر المريض...</option>
-                            @foreach($patients as $patient)
-                                <option value="{{ $patient->id }}">{{ $patient->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('patient_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                    </div>
+            @include('appointments._service-plan-form', [
+                'workspaceMode' => false,
+                'formAction' => route('appointments.store'),
+            ])
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">الأخصائي *</label>
-                        <select name="therapist_id" class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200 @error('therapist_id') border-red-500 @enderror" required>
-                            <option value="">اختر الأخصائي...</option>
-                            @foreach($therapists as $therapist)
-                                <option value="{{ $therapist->id }}">{{ $therapist->name }}</option>
-                            @endforeach
-                        </select>
-                        @error('therapist_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">نوع الجلسة *</label>
-                        <select name="session_type_id" class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200" required>
-                            @foreach($sessionTypes as $type)
-                                <option value="{{ $type->id }}">{{ $type->name }} ({{ $type->duration_minutes }} د)</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">موعد البدء *</label>
-                        <input type="datetime-local" name="scheduled_at" class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200" required>
-                        @error('scheduled_at') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror
-                        @error('therapist_id') <span class="text-red-500 text-xs">{{ $message }}</span> @enderror {{-- عشان رسالة التضارب بتظهر هنا --}}
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ملاحظات</label>
-                        <textarea name="notes" rows="2" class="w-full border rounded-lg px-3 py-2 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-200"></textarea>
-                    </div>
-
-                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg">حجز الموعد</button>
-                </div>
-            </form>
+            @if(auth()->user()->can('create appointments') && auth()->user()->can('create legacy appointments'))
+            <details class="mt-5 border-t border-surface-border pt-4">
+                <summary class="cursor-pointer text-sm font-medium text-text-muted">حجز استثنائي بالطريقة القديمة</summary>
+                <p class="mt-2 text-xs text-text-muted">يُستخدم فقط للمواعيد القديمة أو الحالات الإدارية الاستثنائية، ولا يمر بمسار مقدم تأكيد الموعد.</p>
+                <form action="{{ route('appointments.store') }}" method="POST" class="mt-4 space-y-4">@csrf
+                    <select name="patient_id" class="clinic-field w-full" required><option value="">اختر المريض...</option>@foreach($patients as $patient)<option value="{{ $patient->id }}">{{ $patient->name }}</option>@endforeach</select>
+                    <select name="therapist_id" class="clinic-field w-full" required><option value="">اختر الأخصائي...</option>@foreach($therapists as $therapist)<option value="{{ $therapist->id }}">{{ $therapist->name }}</option>@endforeach</select>
+                    <select name="session_type_id" class="clinic-field w-full" required>@foreach($sessionTypes as $type)<option value="{{ $type->id }}">{{ $type->name }} ({{ $type->duration_minutes }} د)</option>@endforeach</select>
+                    <input type="datetime-local" name="scheduled_at" class="clinic-field w-full" required>
+                    <textarea name="legacy_booking_reason" rows="2" class="clinic-field w-full" placeholder="سبب الحجز الاستثنائي" required></textarea>
+                    <textarea name="notes" rows="2" class="clinic-field w-full" placeholder="ملاحظات"></textarea>
+                    <button type="submit" class="clinic-btn-secondary w-full">تسجيل الحجز الاستثنائي</button>
+                </form>
+            </details>
+            @endif
         </div>
 
         <!-- القسم الأيسر: جدول المواعيد اليومية -->
@@ -104,8 +79,14 @@
                                     <h3 class="font-bold text-gray-900 dark:text-white">{{ $appointment->patient->name }}</h3>
                                     <p class="text-sm text-gray-600 dark:text-gray-400">
                                         {{ $appointment->therapist->name }} -
-                                        <span style="color: {{ $appointment->sessionType->color }}">{{ $appointment->sessionType->name }}</span>
+                                        <span class="text-primary">{{ $appointment->patientServicePlanItem?->service?->name ?? $appointment->sessionType?->name ?? 'خدمة غير محددة' }}</span>
                                     </p>
+                                    @if($appointment->financially_confirmed_at)
+                                        <p class="mt-1 text-xs text-success">مؤكد ماليًا · مقدم {{ $appointment->confirmation_deposit_amount_snapshot }} ج.م</p>
+                                    @endif
+                                    @if(! $appointment->patient_service_plan_item_id && $appointment->legacy_booking_reason)
+                                        <span class="mt-1 inline-flex rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning">حجز استثنائي</span>
+                                    @endif
                                 </div>
                             </div>
 
@@ -117,7 +98,11 @@
                                     <!-- أزرار تغيير الحالة -->
                                     <form action="{{ route('appointments.updateStatus', $appointment) }}" method="POST">
                                         @csrf
-                                        <button type="submit" name="status" value="مكتمل" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">مكتمل</button>
+                                        @if($appointment->patient_service_plan_item_id)
+                                            <span class="px-2 py-1 text-xs text-text-muted">الإتمام من مسار الخدمة</span>
+                                        @else
+                                            <button type="submit" name="status" value="مكتمل" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">مكتمل</button>
+                                        @endif
                                         <button type="submit" name="status" value="غياب" class="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded">غياب</button>
                                         <button type="submit" name="status" value="ملغى" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">إلغاء</button>
                                     </form>
