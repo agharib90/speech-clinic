@@ -78,6 +78,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('permission:manage checkins')->group(function () {
         Route::get('/reception', [ReceptionController::class, 'index'])->name('reception.index');
         Route::post('/reception/scan', [ReceptionController::class, 'processScan'])->name('reception.scan');
+        Route::post('/reception/appointments/{appointment}/attendance', [ReceptionController::class, 'confirmAttendance'])
+            ->name('reception.attendance.confirm');
         Route::post('/reception/{checkin}/checkout', [ReceptionController::class, 'checkout'])->name('reception.checkout');
     });
 

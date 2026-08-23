@@ -254,7 +254,7 @@ this phase.
 - Corrections require authorization/audit rather than silent history rewriting.
 
 Status:
-Existing capability present; exact gap to be inspected before further development.
+Complete
 
 ---
 
@@ -375,3 +375,4 @@ Before implementing any requested capability:
 4. Preserve historical finance, pricing and audit integrity.
 5. Add focused regression tests.
 6. Manual acceptance before final production release.
+
