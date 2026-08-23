@@ -1,4 +1,4 @@
-﻿# Speech Clinic — Client Requirements & Delivery Tracking
+# Speech Clinic — Client Requirements & Delivery Tracking
 
 Last consolidated: 2026-08-22
 
@@ -375,4 +375,3 @@ Before implementing any requested capability:
 4. Preserve historical finance, pricing and audit integrity.
 5. Add focused regression tests.
 6. Manual acceptance before final production release.
-

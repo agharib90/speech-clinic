@@ -322,44 +322,49 @@ class AppointmentServicePlanBookingTest extends TestCase
 
     public function test_legacy_booking_rendering_and_completion_continue_to_work(): void
     {
-        $manager = $this->userWithPermissions([
-            'create appointments',
-            'create legacy appointments',
-            'view appointments',
-            'edit appointments',
-        ]);
-        $patient = $this->patient();
-        $therapistUser = User::factory()->create();
-        $legacyTherapist = Therapist::create([
-            'user_id' => $therapistUser->id,
-            'name' => 'أخصائي حجز قديم',
-            'salary_type' => 'monthly',
-            'is_active' => true,
-        ]);
-        foreach (array_keys(TherapistWorkPeriod::WEEKDAYS) as $weekday) {
-            $legacyTherapist->workPeriods()->create([
-                'weekday' => $weekday,
-                'starts_at' => '08:00',
-                'ends_at' => '22:00',
+        $this->travelTo('2026-08-03 09:00:00');
+
+        try {
+            $manager = $this->userWithPermissions([
+                'create appointments',
+                'create legacy appointments',
+                'view appointments',
+                'edit appointments',
             ]);
+            $patient = $this->patient();
+            $therapistUser = User::factory()->create();
+            $legacyTherapist = Therapist::create([
+                'user_id' => $therapistUser->id,
+                'name' => 'أخصائي حجز قديم',
+                'salary_type' => 'monthly',
+                'is_active' => true,
+            ]);
+            $scheduledAt = now()->addDays(10)->setTime(10, 0);
+            $legacyTherapist->workPeriods()->create([
+                'weekday' => $scheduledAt->dayOfWeek,
+                'starts_at' => '08:00',
+                'ends_at' => '17:00',
+            ]);
+            $sessionType = SessionType::create(['name' => 'جلسة قديمة', 'duration_minutes' => 30, 'price' => 100]);
+
+            $this->actingAs($manager)->post(route('appointments.store'), [
+                'patient_id' => $patient->id,
+                'therapist_id' => $therapistUser->id,
+                'session_type_id' => $sessionType->id,
+                'scheduled_at' => $scheduledAt->format('Y-m-d\TH:i'),
+                'legacy_booking_reason' => 'إدخال موعد قديم',
+            ])->assertRedirect();
+            $appointment = Appointment::firstOrFail();
+
+            $this->actingAs($manager)->get(route('appointments.index', ['date' => $appointment->scheduled_at->format('Y-m-d')]))
+                ->assertOk()
+                ->assertSeeText('جلسة قديمة');
+            $this->actingAs($manager)->post(route('appointments.update-status', $appointment), ['status' => 'مكتمل'])
+                ->assertRedirect();
+            $this->assertDatabaseHas('therapy_sessions', ['appointment_id' => $appointment->id]);
+        } finally {
+            $this->travelBack();
         }
-        $sessionType = SessionType::create(['name' => 'جلسة قديمة', 'duration_minutes' => 30, 'price' => 100]);
-
-        $this->actingAs($manager)->post(route('appointments.store'), [
-            'patient_id' => $patient->id,
-            'therapist_id' => $therapistUser->id,
-            'session_type_id' => $sessionType->id,
-            'scheduled_at' => now()->addDays(10)->format('Y-m-d\TH:i'),
-            'legacy_booking_reason' => 'إدخال موعد قديم',
-        ])->assertRedirect();
-        $appointment = Appointment::firstOrFail();
-
-        $this->actingAs($manager)->get(route('appointments.index', ['date' => $appointment->scheduled_at->format('Y-m-d')]))
-            ->assertOk()
-            ->assertSeeText('جلسة قديمة');
-        $this->actingAs($manager)->post(route('appointments.update-status', $appointment), ['status' => 'مكتمل'])
-            ->assertRedirect();
-        $this->assertDatabaseHas('therapy_sessions', ['appointment_id' => $appointment->id]);
     }
 
     public function test_v2_appointment_cannot_use_legacy_completion_and_creates_no_side_effects(): void
