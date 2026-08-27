@@ -14,7 +14,8 @@
                 <a href="{{ route('patients.workspace', $patientServicePlan->patient) }}" class="clinic-btn-secondary">رجوع إلى ملف الحالة</a>
                 <a href="{{ route('patients.service-plans.index', $patientServicePlan->patient) }}" class="clinic-btn-secondary">كل الخطط</a>
                 <a href="{{ route('patient-service-plans.edit', $patientServicePlan) }}" class="clinic-btn-secondary text-primary">تعديل الخطة</a>
-                @if($patientServicePlan->status === \App\Models\PatientServicePlan::STATUS_DRAFT)
+                @if($patientServicePlan->status === \App\Models\PatientServicePlan::STATUS_DRAFT
+                    && ($patientServicePlan->clinical_evaluation_id === null || $patientServicePlan->isClinicallyApproved()))
                     <form method="POST" action="{{ route('patient-service-plans.activate', $patientServicePlan) }}">@csrf<button class="clinic-btn-primary">تفعيل الخطة</button></form>
                 @endif
             </div>

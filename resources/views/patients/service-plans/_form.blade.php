@@ -34,8 +34,8 @@
 
     @if(! $canFullyEdit)
         <div class="rounded-lg border border-warning bg-warning-soft px-4 py-3 text-sm text-warning">
-            <p class="font-semibold">بيانات الخطة المالية محمية</p>
-            <p class="mt-1">لا يمكن تعديل الخدمات أو الأسعار أو الترتيب بعد تسجيل دفعة أو استخدام خدمة. يمكنك تحديث الملاحظات فقط.</p>
+            <p class="font-semibold">{{ $patientServicePlan->isClinicallyApproved() ? 'الخطة السريرية معتمدة' : 'بيانات الخطة المالية محمية' }}</p>
+            <p class="mt-1">{{ $patientServicePlan->isClinicallyApproved() ? 'الخدمات والكميات والترتيب للقراءة فقط. تظل الإجراءات المالية المسموحة متاحة دون تغيير القرار السريري.' : 'لا يمكن تعديل الخدمات أو الأسعار أو الترتيب بعد تسجيل دفعة أو استخدام خدمة. يمكنك تحديث الملاحظات فقط.' }}</p>
         </div>
 
         <form method="POST" action="{{ $fromWorkspace ? URL::signedRoute('patient-service-plans.update', ['patientServicePlan' => $patientServicePlan, 'workspace_patient' => $patient->id]) : route('patient-service-plans.update', $patientServicePlan) }}" class="clinic-card overflow-hidden">
@@ -57,10 +57,16 @@
                 <div class="mt-4 divide-y divide-surface-border rounded-lg border border-surface-border">
                     @foreach($patientServicePlan->items as $item)
                         <div class="grid gap-3 p-4 text-sm sm:grid-cols-[minmax(0,1fr)_repeat(4,minmax(5rem,auto))] sm:items-center">
+                            @if($patientServicePlan->isClinicallyApproved() && ! $patientServicePlan->hasProtectedHistory())
+                                <input type="hidden" name="items[{{ $loop->index }}][id]" value="{{ $item->id }}">
+                                <input type="hidden" name="items[{{ $loop->index }}][service_id]" value="{{ $item->service_id }}">
+                                <input type="hidden" name="items[{{ $loop->index }}][position]" value="{{ $item->position }}">
+                                <input type="hidden" name="items[{{ $loop->index }}][planned_quantity]" value="{{ $item->planned_quantity }}">
+                            @endif
                             <div><p class="font-semibold text-text">{{ $item->position }}. {{ $item->service->name }}</p><p class="text-xs text-text-muted">{{ $item->service->specialty->name }}</p></div>
                             <div><p class="text-xs text-text-muted">الكمية</p><p class="font-medium text-text">{{ $item->planned_quantity }}</p></div>
                             <div><p class="text-xs text-text-muted">سعر الوحدة</p><p class="font-medium text-text">{{ number_format((float) $item->customer_unit_price, 2) }}</p></div>
-                            <div><p class="text-xs text-text-muted">الخصم</p><p class="font-medium text-text">{{ number_format((float) $item->discount_amount, 2) }}</p></div>
+                            <div><p class="text-xs text-text-muted">الخصم</p>@if($patientServicePlan->isClinicallyApproved() && ! $patientServicePlan->hasProtectedHistory() && $canManageDiscounts)<input type="number" name="items[{{ $loop->index }}][discount_amount]" value="{{ old('items.'.$loop->index.'.discount_amount', $item->discount_amount) }}" min="0" step="0.01" class="clinic-field mt-1 w-full">@else<p class="font-medium text-text">{{ number_format((float) $item->discount_amount, 2) }}</p>@endif</div>
                             <div><p class="text-xs text-text-muted">بعد الخصم</p><p class="font-semibold text-primary">{{ number_format((float) $item->final_unit_price, 2) }}</p></div>
                         </div>
                     @endforeach
@@ -74,16 +80,17 @@
             </div>
 
             <div class="flex justify-end border-t border-surface-border bg-surface-muted px-5 py-4">
-                <button class="clinic-btn-primary">حفظ الملاحظات</button>
+                <button class="clinic-btn-primary">{{ $patientServicePlan->isClinicallyApproved() && ! $patientServicePlan->hasProtectedHistory() ? 'حفظ الشروط المالية' : 'حفظ الملاحظات' }}</button>
             </div>
         </form>
     @else
-        <form method="POST" action="{{ $workspaceMode ? URL::signedRoute('patients.service-plans.store', ['patient' => $patient, 'workspace_patient' => $patient->id]) : ($isEdit ? ($fromWorkspace ? URL::signedRoute('patient-service-plans.update', ['patientServicePlan' => $patientServicePlan, 'workspace_patient' => $patient->id]) : route('patient-service-plans.update', $patientServicePlan)) : route('patients.service-plans.store', $patient)) }}" class="{{ $workspaceMode ? 'overflow-hidden rounded-lg border border-surface-border' : 'clinic-card overflow-hidden' }}" data-initial-service-ids="{{ collect($formItems)->pluck('service_id')->filter()->implode(',') }}" x-data="servicePlanForm({{ Illuminate\Support\Js::from($serviceOptions) }}, {{ Illuminate\Support\Js::from($formItems) }})">
+        <form method="POST" action="{{ $workspaceMode ? URL::signedRoute('patients.service-plans.store', ['patient' => $patient, 'workspace_patient' => $patient->id]) : ($isEdit ? ($fromWorkspace ? URL::signedRoute('patient-service-plans.update', ['patientServicePlan' => $patientServicePlan, 'workspace_patient' => $patient->id]) : route('patient-service-plans.update', $patientServicePlan)) : route('patients.service-plans.store', $patient)) }}" class="{{ $workspaceMode ? 'overflow-hidden rounded-lg border border-surface-border' : 'clinic-card overflow-hidden' }}" data-initial-service-ids="{{ collect($formItems)->pluck('service_id')->filter()->implode(',') }}" x-data="servicePlanForm({{ Illuminate\Support\Js::from($serviceOptions) }}, {{ Illuminate\Support\Js::from($formItems) }})" @if($workspaceMode) data-workspace-dirty-track @endif>
             @csrf
             @if($isEdit) @method('PUT') @endif
             @if($workspaceMode)
                 <input type="hidden" name="workspace" value="1">
                 <input type="hidden" name="workspace_panel" value="plan">
+                <input type="hidden" name="workspace_section" value="plan">
             @elseif($fromWorkspace)
                 <input type="hidden" name="workspace" value="1">
             @endif
@@ -149,7 +156,7 @@
 
             <div class="flex flex-col justify-between gap-3 border-t border-surface-border bg-surface-muted px-5 py-4 sm:flex-row sm:items-center">
                 <div><p class="text-xs text-text-muted">الإجمالي التقريبي</p><p class="text-xl font-bold text-text"><span x-text="money(planTotal())"></span> ج.م</p></div>
-                <div class="flex gap-2">@if($workspaceMode)<button type="button" class="clinic-btn-secondary" @click="panel = null">إلغاء</button>@else<a href="{{ $fromWorkspace ? route('patients.workspace', $patient) : ($isEdit ? route('patient-service-plans.show', $patientServicePlan) : route('patients.service-plans.index', $patient)) }}" class="clinic-btn-secondary">إلغاء</a>@endif<button class="clinic-btn-primary">{{ $isEdit ? 'حفظ التعديلات' : 'حفظ كمسودة' }}</button></div>
+                <div class="flex gap-2">@if($workspaceMode)<button type="button" class="clinic-btn-secondary" @click="closePanel('plan')">إلغاء</button>@else<a href="{{ $fromWorkspace ? route('patients.workspace', $patient) : ($isEdit ? route('patient-service-plans.show', $patientServicePlan) : route('patients.service-plans.index', $patient)) }}" class="clinic-btn-secondary">إلغاء</a>@endif<button class="clinic-btn-primary">{{ $isEdit ? 'حفظ التعديلات' : 'حفظ كمسودة' }}</button></div>
             </div>
         </form>
     @endif

@@ -93,8 +93,9 @@ class PatientWorkspaceTest extends TestCase
         $this->actingAs($user)->get(route('patients.workspace', $patient))
             ->assertOk()
             ->assertSeeText('لا توجد خطة نشطة')
-            ->assertSeeText('إنشاء خطة خدمات')
-            ->assertSeeText('حفظ كمسودة');
+            ->assertSeeText('بانتظار إسناد التقييم')
+            ->assertDontSeeText('إنشاء خطة خدمات')
+            ->assertDontSeeText('حفظ كمسودة');
     }
 
     public function test_upcoming_appointments_belong_only_to_workspace_patient(): void
@@ -128,14 +129,18 @@ class PatientWorkspaceTest extends TestCase
             'view appointments',
             'create appointments',
         ]);
+        $this->activePlan($patient);
 
         $this->actingAs($authorized)->get(route('patients.workspace', $patient))
             ->assertOk()
             ->assertSeeText('إنشاء فاتورة')
             ->assertSeeText('حجز موعد')
-            ->assertSeeText('إنشاء خطة')
+            ->assertSeeText('إدارة الخطة')
             ->assertSeeText('تأكيد الحضور')
             ->assertSeeText('سيتم تفعيله مع مسار الاستقبال الجديد')
+            ->assertSee('data-workspace-open="finance:invoice"', false)
+            ->assertSee('data-workspace-open="plan:plan"', false)
+            ->assertSee('data-workspace-open="appointments:appointment"', false)
             ->assertDontSee('href="'.route('reception.index').'" class="workspace-action"', false);
 
         $limited = $this->userWithPermissions(['view patients']);
@@ -154,6 +159,84 @@ class PatientWorkspaceTest extends TestCase
             'issue_date' => now()->toDateString(),
             'items' => [['description' => 'محاولة غير مصرحة', 'quantity' => 1, 'unit_price' => 10]],
         ])->assertForbidden();
+    }
+
+    public function test_workspace_main_section_navigation_is_whitelisted_and_permission_aware(): void
+    {
+        $patient = $this->patient('حالة أقسام مساحة العمل');
+        $this->activePlan($patient);
+        $authorized = $this->userWithPermissions([
+            'view patients',
+            'manage patient service plans',
+            'view finance',
+            'manage invoices',
+            'view appointments',
+            'create appointments',
+            'view therapy',
+        ]);
+
+        $this->actingAs($authorized)->get(route('patients.workspace', [
+            'patient' => $patient,
+            'section' => 'finance',
+        ]))
+            ->assertOk()
+            ->assertSee('data-workspace-section-navigation', false)
+            ->assertSee("initialSection: 'finance'", false)
+            ->assertSee('data-workspace-section-tab="overview"', false)
+            ->assertSee('data-workspace-section-tab="clinical"', false)
+            ->assertSee('data-workspace-section-tab="plan"', false)
+            ->assertSee('data-workspace-section-tab="finance"', false)
+            ->assertSee('data-workspace-section-tab="appointments"', false)
+            ->assertSee('data-workspace-section-tab="therapy"', false)
+            ->assertSee('data-workspace-section-tab="guardian"', false)
+            ->assertSee('data-workspace-section-tab="activity"', false)
+            ->assertSee('data-workspace-dirty-indicator', false)
+            ->assertSee('data-workspace-dirty-track', false);
+
+        $this->actingAs($authorized)->get(route('patients.workspace', [
+            'patient' => $patient,
+            'section' => 'not-a-section',
+        ]))
+            ->assertOk()
+            ->assertSee("initialSection: 'overview'", false);
+
+        $limited = $this->userWithPermissions(['view patients']);
+        $this->actingAs($limited)->get(route('patients.workspace', $patient))
+            ->assertOk()
+            ->assertSee('data-workspace-section-tab="overview"', false)
+            ->assertSee('data-workspace-section-tab="clinical"', false)
+            ->assertSee('data-workspace-section-tab="guardian"', false)
+            ->assertSee('data-workspace-section-tab="activity"', false)
+            ->assertDontSee('data-workspace-section-tab="plan"', false)
+            ->assertDontSee('data-workspace-section-tab="finance"', false)
+            ->assertDontSee('data-workspace-section-tab="appointments"', false)
+            ->assertDontSee('data-workspace-section-tab="therapy"', false);
+    }
+
+    public function test_workspace_validation_panel_reopens_its_parent_section(): void
+    {
+        $user = $this->userWithPermissions(['view patients', 'manage invoices']);
+        $patient = $this->patient('حالة رجوع التحقق');
+        $this->activePlan($patient);
+        $workspaceUrl = route('patients.workspace', ['patient' => $patient, 'section' => 'overview']);
+
+        $response = $this->actingAs($user)->from($workspaceUrl)->post(URL::signedRoute('invoices.store', [
+            'workspace_patient' => $patient->id,
+        ]), [
+            'workspace' => 1,
+            'workspace_panel' => 'invoice',
+            'workspace_section' => 'finance',
+            'patient_id' => $patient->id,
+            'issue_date' => now()->toDateString(),
+            'invoice_item_mode' => 'manual',
+            'items' => [],
+        ]);
+
+        $response->assertRedirect($workspaceUrl)->assertSessionHasErrors('items');
+        $this->get($workspaceUrl)
+            ->assertOk()
+            ->assertSee("initialSection: 'finance'", false)
+            ->assertSee("initialPanel: 'invoice'", false);
     }
 
     public function test_historical_attendance_and_sessions_do_not_complete_current_workflow_stages(): void
@@ -189,8 +272,8 @@ class PatientWorkspaceTest extends TestCase
             ->assertViewHas('workspace', function (array $workspace) {
                 $workflow = collect($workspace['workflow'])->keyBy('label');
 
-                return $workflow['الحضور']['complete'] === false
-                    && $workflow['الجلسة']['complete'] === false;
+                return $workflow['الحجز']['complete'] === false
+                    && $workflow['المتابعة']['complete'] === false;
             });
     }
 
@@ -267,7 +350,7 @@ class PatientWorkspaceTest extends TestCase
                 'quantity' => 1,
                 'unit_price' => '100.00',
             ]],
-        ])->assertRedirect(route('patients.workspace', $patient));
+        ])->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'finance']));
 
         $this->actingAs($user)->post(route('invoices.store'), [
             'patient_id' => $patient->id,
@@ -306,7 +389,7 @@ class PatientWorkspaceTest extends TestCase
                 'customer_unit_price' => '90.00',
                 'discount_amount' => '0.00',
             ]],
-        ])->assertRedirect(route('patients.workspace', $patient));
+        ])->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'plan']));
 
         $plan = $patient->servicePlans()->sole();
         $this->assertSame(PatientServicePlan::STATUS_DRAFT, $plan->status);
@@ -317,9 +400,72 @@ class PatientWorkspaceTest extends TestCase
         ]), [
             'workspace' => 1,
             'workspace_panel' => 'plan',
-        ])->assertRedirect(route('patients.workspace', $patient));
+        ])->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'plan']));
 
         $this->assertSame(PatientServicePlan::STATUS_ACTIVE, $plan->fresh()->status);
+    }
+
+    public function test_legacy_draft_plan_remains_operational_and_is_not_awaiting_assignment(): void
+    {
+        $user = $this->userWithPermissions([
+            'view patients',
+            'manage patient service plans',
+            'view finance',
+            'manage invoices',
+            'view appointments',
+            'create appointments',
+        ]);
+        $legacyPatient = $this->patient('حالة بخطة قديمة');
+        $newPatient = $this->patient('حالة جديدة فعلًا');
+        $specialty = Specialty::create(['name' => 'تخصص خطة قديمة', 'is_active' => true]);
+        $service = Service::create([
+            'specialty_id' => $specialty->id,
+            'name' => 'خدمة خطة قديمة',
+            'default_duration_minutes' => 30,
+            'customer_price' => '120.00',
+            'is_active' => true,
+        ]);
+        $plan = PatientServicePlan::create([
+            'patient_id' => $legacyPatient->id,
+            'clinical_evaluation_id' => null,
+            'status' => PatientServicePlan::STATUS_DRAFT,
+        ]);
+        $plan->items()->create([
+            'service_id' => $service->id,
+            'position' => 1,
+            'planned_quantity' => 3,
+            'customer_unit_price' => '120.00',
+            'discount_amount' => '0.00',
+            'final_unit_price' => '120.00',
+        ]);
+
+        $this->actingAs($user)->get(route('patients.workspace', $legacyPatient))
+            ->assertOk()
+            ->assertViewHas('workspace', fn (array $workspace) => $workspace['clinical']['key'] === 'legacy_plan'
+                && $workspace['currentPlan']->is($plan))
+            ->assertDontSeeText('بانتظار إسناد التقييم')
+            ->assertSeeText('خدمة خطة قديمة')
+            ->assertSeeText('تفعيل الخطة')
+            ->assertSee('data-workspace-direct-action', false)
+            ->assertSeeText('المالية والفواتير')
+            ->assertSeeText('المواعيد');
+
+        $this->actingAs($user)->get(route('patients.index', ['stage' => 'awaiting_assignment']))
+            ->assertOk()
+            ->assertSeeText($newPatient->name)
+            ->assertDontSeeText($legacyPatient->name);
+
+        $this->actingAs($user)->post(URL::signedRoute('patient-service-plans.activate', [
+            'patientServicePlan' => $plan,
+            'workspace_patient' => $legacyPatient->id,
+        ]), [
+            'workspace' => 1,
+            'workspace_panel' => 'plan',
+        ])->assertRedirect(route('patients.workspace', ['patient' => $legacyPatient, 'section' => 'plan']));
+
+        $this->assertSame(PatientServicePlan::STATUS_ACTIVE, $plan->fresh()->status);
+        $this->assertDatabaseCount('patient_clinical_evaluations', 0);
+        $this->assertDatabaseCount('patient_clinical_evaluation_assignments', 0);
     }
 
     public function test_workspace_finance_lists_only_current_patient_invoices(): void
@@ -367,7 +513,7 @@ class PatientWorkspaceTest extends TestCase
         $this->actingAs($user)->post(URL::signedRoute('invoices.payments', [
             'invoice' => $invoice,
             'workspace_patient' => $patient->id,
-        ]), $payload)->assertRedirect(route('patients.workspace', $patient));
+        ]), $payload)->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'finance']));
 
         $this->assertDatabaseHas('invoice_payments', ['invoice_id' => $invoice->id, 'amount' => 40]);
 
@@ -432,7 +578,7 @@ class PatientWorkspaceTest extends TestCase
                 'quantity' => 2,
                 'unit_price' => '999.00',
             ]],
-        ])->assertRedirect(route('patients.workspace', $patient));
+        ])->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'finance']));
 
         $invoice = Invoice::query()->where('patient_id', $patient->id)->latest('id')->firstOrFail();
         $this->assertDatabaseHas('invoice_items', [
@@ -476,7 +622,7 @@ class PatientWorkspaceTest extends TestCase
             'workspace' => 1,
             'workspace_panel' => 'allocation',
             'invoice_payment_id' => $payment->id,
-        ])->assertRedirect(route('patients.workspace', $patient));
+        ])->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'plan']));
 
         $this->assertDatabaseHas('patient_service_plan_payments', [
             'patient_service_plan_id' => $plan->id,
@@ -527,7 +673,7 @@ class PatientWorkspaceTest extends TestCase
         ];
 
         $this->actingAs($user)->post($action, $payload)
-            ->assertRedirect(route('patients.workspace', $patient));
+            ->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'appointments']));
 
         $this->assertDatabaseHas('appointments', [
             'patient_id' => $patient->id,
@@ -653,7 +799,7 @@ class PatientWorkspaceTest extends TestCase
             ->assertDontSee('<h1 class="truncate text-2xl font-bold text-text sm:text-3xl"><a', false)
             ->assertSee('href="'.route('patients.show', $patient).'"', false)
             ->assertSee('>الملف الطبي الكامل</a>', false)
-            ->assertSee('href="#workspace-plan"', false)
+            ->assertSee('href="'.route('patients.workspace', ['patient' => $patient, 'section' => 'plan']).'"', false)
             ->assertDontSee('href="'.route('patient-service-plans.show', $plan).'"', false);
     }
 
@@ -685,7 +831,7 @@ class PatientWorkspaceTest extends TestCase
                 'position' => 1,
                 'planned_quantity' => $item->planned_quantity,
             ]],
-        ])->assertRedirect(route('patients.workspace', $patient));
+        ])->assertRedirect(route('patients.workspace', ['patient' => $patient, 'section' => 'plan']));
 
         $this->assertSame('100.00', $plan->items()->firstOrFail()->customer_unit_price);
     }

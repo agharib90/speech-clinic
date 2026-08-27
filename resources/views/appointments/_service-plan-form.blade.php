@@ -12,11 +12,12 @@
     date: {{ Illuminate\Support\Js::from($oldScheduledAt ? substr($oldScheduledAt, 0, 10) : '') }},
     scheduledAt: {{ Illuminate\Support\Js::from($oldScheduledAt) }},
     availabilityUrl: {{ Illuminate\Support\Js::from(route('appointments.availability')) }},
-})">
+})" @if($workspaceMode) data-workspace-dirty-track @endif>
     @csrf
     @if($workspaceMode)
         <input type="hidden" name="workspace" value="1">
         <input type="hidden" name="workspace_panel" value="appointment">
+        <input type="hidden" name="workspace_section" value="appointments">
         <input type="hidden" name="patient_id" value="{{ $patient->id }}">
         <p class="mb-4 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-sm text-primary">حجز موعد للحالة: <strong>{{ $patient->name }}</strong></p>
     @endif
@@ -98,7 +99,7 @@
         <label><span class="mb-1 block text-sm font-medium text-text">ملاحظات</span><textarea name="notes" rows="2" class="clinic-field w-full">{{ old('notes') }}</textarea></label>
 
         <div class="flex justify-end gap-2">
-            @if($workspaceMode)<button type="button" class="clinic-btn-secondary" @click="panel = null">إلغاء</button>@endif
+            @if($workspaceMode)<button type="button" class="clinic-btn-secondary" @click="closePanel('appointment')">إلغاء</button>@endif
             <button type="submit" class="clinic-btn-primary" :disabled="!selectedItem?.can_book || !scheduledAt">حجز وتأكيد الموعد</button>
         </div>
     </div>

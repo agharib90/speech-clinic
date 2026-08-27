@@ -26,16 +26,20 @@ class PatientServicePlan extends Model
 
     protected $fillable = [
         'patient_id',
+        'clinical_evaluation_id',
         'status',
         'starts_at',
         'ends_at',
         'notes',
         'created_by',
+        'clinical_approved_by',
+        'clinical_approved_at',
     ];
 
     protected $casts = [
         'starts_at' => 'date',
         'ends_at' => 'date',
+        'clinical_approved_at' => 'datetime',
     ];
 
     public function patient(): BelongsTo
@@ -46,6 +50,16 @@ class PatientServicePlan extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function clinicalEvaluation(): BelongsTo
+    {
+        return $this->belongsTo(PatientClinicalEvaluation::class, 'clinical_evaluation_id');
+    }
+
+    public function clinicalApprover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'clinical_approved_by');
     }
 
     public function items(): HasMany
@@ -115,12 +129,20 @@ class PatientServicePlan extends Model
     public function canFullyEdit(): bool
     {
         return in_array($this->status, [self::STATUS_DRAFT, self::STATUS_ACTIVE], true)
+            && ! $this->isClinicallyApproved()
             && ! $this->hasProtectedHistory();
+    }
+
+    public function isClinicallyApproved(): bool
+    {
+        return $this->clinical_approved_at !== null;
     }
 
     public function canDelete(): bool
     {
-        return $this->status === self::STATUS_DRAFT && ! $this->hasProtectedHistory();
+        return $this->status === self::STATUS_DRAFT
+            && ! $this->isClinicallyApproved()
+            && ! $this->hasProtectedHistory();
     }
 
     public function unpaidAmount(): string

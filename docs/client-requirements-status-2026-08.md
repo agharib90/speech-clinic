@@ -1,6 +1,6 @@
 # Speech Clinic — Client Requirements & Delivery Tracking
 
-Last consolidated: 2026-08-22
+Last consolidated: 2026-08-25
 
 This document is the working business-requirements baseline for the Speech Clinic project.
 Existing capabilities must be extended where possible; duplicate modules/tables should not
@@ -22,6 +22,33 @@ be created when an equivalent capability already exists.
 Status:
 Implemented substantially; continue improving operational consolidation where useful.
 
+### Authoritative Clinical Handoff
+
+The patient journey is:
+
+Reception Registration
+→ Clinical Evaluation
+→ Clinical Treatment Plan
+→ Reception Handoff
+→ Specialist Assignment / Booking
+→ Treatment Execution
+
+This batch adds the clinical evaluation foundation, its draft/completed lifecycle, clinical
+plan preparation from approved services and quantities, clinical approval, reception handoff,
+stage-aware Patient Workspace guidance, and direct reuse of a duplicate Guardian candidate.
+
+Clinical approval is recorded independently from the existing service-plan status. A clinically
+approved plan remains `draft` until reception advances it through the existing operational and
+financial workflow; `active` retains its established meaning.
+
+Specialist Assignment remains deferred because the repository does not yet contain a canonical
+pre-treatment assignment record. It must not be inferred from a future appointment or fabricated
+for display. Patient-level access remains enforced until that assignment design is approved.
+
+Status:
+Clinical evaluation, treatment-plan approval, and reception handoff implemented; canonical
+Specialist Assignment deferred.
+
 ---
 
 ## 2. Specialties, Services and Specialists
@@ -31,6 +58,24 @@ Implemented substantially; continue improving operational consolidation where us
 - Specialist entitlement/rate can differ by specialist and service.
 - Historical specialist rates must remain preserved.
 - Customer service price and specialist entitlement are separate concepts.
+
+### Specialist Workspace
+
+The therapist/specialist page is part of the current client request and should act as a
+unified operational workspace that minimizes moving between pages. It includes the
+therapist overview, appointments, services and entitlements, work schedule, compensation
+summary, login-account linkage status, and useful performance indicators supported by
+existing application records.
+
+The client specifically requires less navigation, mouse movement, and scrolling; fewer
+duplicated actions; and most specialist-related work to remain available from one page.
+
+Appointment-attendance percentage is deferred because the current repository contains
+separate patient check-in and employee attendance concepts without an approved numerator
+and denominator for a specialist performance rate. No synthetic attendance KPI is used.
+
+Workspace status:
+Implemented; pending manual acceptance.
 
 Status:
 Implemented foundation.
@@ -268,7 +313,7 @@ Complete
 - Do not trigger those effects merely from reception attendance.
 
 Status:
-Further implementation/review required.
+Implemented; pending manual acceptance
 
 ---
 

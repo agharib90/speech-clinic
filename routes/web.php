@@ -4,7 +4,10 @@ use App\Http\Controllers\AppointmentAvailabilityController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ArticulationAssessmentController;
 use App\Http\Controllers\CaseHistoryController;
+use App\Http\Controllers\ClinicalEvaluationQueueController;
+use App\Http\Controllers\ClinicalHandoffQueueController;
 use App\Http\Controllers\ClinicalProgressPointController;
+use App\Http\Controllers\ClinicalTreatmentPlanController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DischargeSummaryController;
 use App\Http\Controllers\EquipmentController;
@@ -12,6 +15,8 @@ use App\Http\Controllers\GuardianController;
 use App\Http\Controllers\HomeTaskController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\MilestoneController;
+use App\Http\Controllers\PatientClinicalEvaluationAssignmentController;
+use App\Http\Controllers\PatientClinicalEvaluationController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientServicePlanController;
 use App\Http\Controllers\PayrollController;
@@ -19,6 +24,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProgramAttachmentController;
 use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReceptionController;
+use App\Http\Controllers\ServiceCompletionController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\SessionPackageController;
 use App\Http\Controllers\SettingController;
@@ -54,21 +60,48 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
+    Route::get('/clinical/evaluations', [ClinicalEvaluationQueueController::class, 'index'])
+        ->middleware('permission:manage clinical evaluations')
+        ->name('clinical.evaluations.index');
+    Route::get('/clinical/handoffs', [ClinicalHandoffQueueController::class, 'index'])
+        ->middleware('permission:manage clinical evaluation assignments')
+        ->name('clinical.handoffs.index');
+
+    Route::middleware('permission:create patients')->group(function () {
+        Route::resource('guardians', GuardianController::class)->only(['create', 'store']);
+        Route::get('patients/guardian-search', [PatientController::class, 'guardianSearch'])
+            ->name('patients.guardian-search');
+        Route::resource('patients', PatientController::class)->only(['create', 'store']);
+    });
+
     Route::middleware('permission:view patients')->group(function () {
         Route::resource('guardians', GuardianController::class)->only(['index', 'show']);
         Route::get('patients/{patient}/workspace', [PatientController::class, 'workspace'])->name('patients.workspace');
         Route::resource('patients', PatientController::class)->only(['index', 'show']);
         Route::get('patients/{patient}/print-card', [PatientController::class, 'printCard'])->name('patients.print-card');
     });
-    Route::middleware('permission:create patients')->group(function () {
-        Route::resource('guardians', GuardianController::class)->only(['create', 'store']);
-        Route::resource('patients', PatientController::class)->only(['create', 'store']);
-    });
     Route::middleware('permission:edit patients')->group(function () {
         Route::resource('guardians', GuardianController::class)->only(['edit', 'update']);
         Route::resource('patients', PatientController::class)->only(['edit', 'update']);
         Route::post('/patients/{patient}/case-history', [CaseHistoryController::class, 'store'])
             ->name('patients.case-history.store');
+    });
+
+    Route::middleware('permission:manage clinical evaluations')->group(function () {
+        Route::post('/patients/{patient}/clinical-evaluation/draft', [PatientClinicalEvaluationController::class, 'saveDraft'])
+            ->name('patients.clinical-evaluation.save-draft');
+        Route::post('/patients/{patient}/clinical-evaluations/{evaluation}/complete', [PatientClinicalEvaluationController::class, 'complete'])
+            ->name('patients.clinical-evaluation.complete');
+        Route::post('/patients/{patient}/clinical-treatment-plan/draft', [ClinicalTreatmentPlanController::class, 'saveDraft'])
+            ->name('patients.clinical-plan.save-draft');
+        Route::post('/patients/{patient}/clinical-treatment-plan/approve', [ClinicalTreatmentPlanController::class, 'approveNew'])
+            ->name('patients.clinical-plan.approve-new');
+        Route::post('/patients/{patient}/clinical-treatment-plans/{patientServicePlan}/approve', [ClinicalTreatmentPlanController::class, 'approve'])
+            ->name('patients.clinical-plan.approve');
+    });
+    Route::middleware('permission:manage clinical evaluation assignments')->group(function () {
+        Route::post('/patients/{patient}/clinical-evaluation-assignment', [PatientClinicalEvaluationAssignmentController::class, 'store'])
+            ->name('patients.clinical-evaluation-assignment.store');
     });
     Route::middleware('permission:delete patients')->group(function () {
         Route::resource('guardians', GuardianController::class)->only(['destroy']);
@@ -101,6 +134,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/appointments/{appointment}/convert', [AppointmentController::class, 'convertToSession'])
         ->middleware('permission:edit appointments')
         ->name('appointments.convert');
+    Route::post('/appointments/{appointment}/complete-service', [ServiceCompletionController::class, 'store'])
+        ->middleware('permission:edit therapy')
+        ->name('appointments.complete-service');
 
     Route::middleware('permission:manage invoices')->group(function () {
         Route::resource('invoices', InvoiceController::class)->only(['create', 'store']);
@@ -128,11 +164,11 @@ Route::middleware('auth')->group(function () {
         Route::post('/payroll/add-record', [PayrollController::class, 'addRecord'])->name('payroll.addRecord');
     });
     Route::resource('therapists', TherapistController::class)
+        ->only(['create', 'store', 'edit', 'update'])
+        ->middleware('permission:manage therapists');
+    Route::resource('therapists', TherapistController::class)
         ->only(['index', 'show'])
         ->middleware('permission:view hr');
-    Route::resource('therapists', TherapistController::class)
-        ->only(['create', 'store'])
-        ->middleware('permission:manage therapists');
     Route::post('/therapists/attendance', [TherapistController::class, 'markAttendance'])
         ->middleware('permission:manage therapists')
         ->name('therapists.attendance');

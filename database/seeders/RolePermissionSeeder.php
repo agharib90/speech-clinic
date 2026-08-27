@@ -20,6 +20,8 @@ class RolePermissionSeeder extends Seeder
             'view appointments', 'create appointments', 'create legacy appointments', 'edit appointments', 'delete appointments',
             // البرامج والجلسات العلاجية
             'view therapy', 'create therapy', 'edit therapy', 'delete therapy',
+            'manage clinical evaluations',
+            'manage clinical evaluation assignments',
             // التطور والواجبات
             'manage milestones', 'manage home tasks',
             // المالية (الفواتير والباقات وعروض الأسعار)
@@ -67,6 +69,7 @@ class RolePermissionSeeder extends Seeder
             'view patients', 'create patients', 'edit patients',
             'manage checkins', 'view checkins',
             'view appointments', 'create appointments', 'edit appointments',
+            'manage clinical evaluation assignments',
         ]);
 
         // أخصائي تخاطب: جلساته فقط، تتبع التطور، الواجبات، ملاحظاته
@@ -74,6 +77,7 @@ class RolePermissionSeeder extends Seeder
             'view patients',
             'view appointments', 'edit appointments',
             'view therapy', 'create therapy', 'edit therapy',
+            'manage clinical evaluations',
             'manage milestones', 'manage home tasks',
         ]);
     }

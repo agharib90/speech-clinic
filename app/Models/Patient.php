@@ -3,8 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Patient extends Model
 {
@@ -12,13 +12,13 @@ class Patient extends Model
 
     protected $fillable = [
         'guardian_id', 'name', 'birth_date', 'gender', 'diagnosis',
-        'barcode', 'qr_code', 'referral_source', 'is_active', 'notes'
+        'barcode', 'qr_code', 'referral_source', 'is_active', 'notes',
     ];
+
     protected $casts = [
         'birth_date' => 'date',
         'is_active' => 'boolean',
     ];
-
 
     // المريض يتبع ولي أمر
     public function guardian()
@@ -54,16 +54,30 @@ class Patient extends Model
         return $this->hasMany(PatientServicePlan::class);
     }
 
+    public function clinicalEvaluations(): HasMany
+    {
+        return $this->hasMany(PatientClinicalEvaluation::class);
+    }
+
+    public function clinicalEvaluationAssignments(): HasMany
+    {
+        return $this->hasMany(PatientClinicalEvaluationAssignment::class);
+    }
+
     protected $appends = ['age'];
 
-public function getAgeAttribute(): string
-{
-    $years = $this->birth_date->diffInYears(now());
-    $months = $this->birth_date->diffInMonths(now()) % 12;
+    public function getAgeAttribute(): string
+    {
+        $years = $this->birth_date->diffInYears(now());
+        $months = $this->birth_date->diffInMonths(now()) % 12;
 
-    if ($years === 0) return "{$months} شهر";
-    if ($months === 0) return "{$years} سنة";
-    return "{$years} سنة و {$months} شهر";
-}
+        if ($years === 0) {
+            return "{$months} شهر";
+        }
+        if ($months === 0) {
+            return "{$years} سنة";
+        }
 
+        return "{$years} سنة و {$months} شهر";
+    }
 }

@@ -58,6 +58,20 @@
     </x-nav-link>
     @endcan
 
+    @can('manage clinical evaluations')
+    <x-nav-link :href="route('clinical.evaluations.index')" :active="request()->routeIs('clinical.evaluations.*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
+        <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5h6m-6 4h6m-6 4h3m-5 8h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+        <span>تقييماتي السريرية</span>
+    </x-nav-link>
+    @endcan
+
+    @can('manage clinical evaluation assignments')
+    <x-nav-link :href="route('clinical.handoffs.index')" :active="request()->routeIs('clinical.handoffs.*')" class="flex items-center px-4 py-2.5 rounded-lg transition">
+        <svg class="w-5 h-5 me-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span>خطط جاهزة للاستقبال</span>
+    </x-nav-link>
+    @endcan
+
     <!-- الاستقبال والباركود -->
     @if(auth()->user()->can('manage checkins') || auth()->user()->can('view appointments'))
     <div class="px-3 pt-3 pb-1 text-[11px] font-semibold tracking-normal text-text-subtle">التشغيل اليومي</div>

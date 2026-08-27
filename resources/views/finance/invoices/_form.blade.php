@@ -13,10 +13,10 @@
     $initialManualItems = $invoiceMode === 'manual' && $oldInvoiceItems !== [] ? $oldInvoiceItems : [['description' => '', 'quantity' => 1, 'unit_price' => 0]];
 @endphp
 
-<form action="{{ $formAction }}" method="POST" x-data="invoiceForm({{ Illuminate\Support\Js::from($planOptions) }}, {{ Illuminate\Support\Js::from($invoiceMode) }}, {{ Illuminate\Support\Js::from($initialPlanItems) }}, {{ Illuminate\Support\Js::from($initialManualItems) }})">
+<form action="{{ $formAction }}" method="POST" x-data="invoiceForm({{ Illuminate\Support\Js::from($planOptions) }}, {{ Illuminate\Support\Js::from($invoiceMode) }}, {{ Illuminate\Support\Js::from($initialPlanItems) }}, {{ Illuminate\Support\Js::from($initialManualItems) }})" @if($workspaceMode) data-workspace-dirty-track @endif>
     @csrf
     @if($workspaceMode)
-        <input type="hidden" name="workspace" value="1"><input type="hidden" name="workspace_panel" value="invoice"><input type="hidden" name="patient_id" value="{{ $patient->id }}"><input type="hidden" name="invoice_item_mode" :value="mode">
+        <input type="hidden" name="workspace" value="1"><input type="hidden" name="workspace_panel" value="invoice"><input type="hidden" name="workspace_section" value="finance"><input type="hidden" name="patient_id" value="{{ $patient->id }}"><input type="hidden" name="invoice_item_mode" :value="mode">
         <p class="mb-4 rounded-lg border border-primary/30 bg-primary-soft px-3 py-2 text-sm text-primary">إنشاء فاتورة للحالة: <strong>{{ $patient->name }}</strong></p>
     @else
         <div class="mb-6 grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -55,7 +55,7 @@
     @error('items.*')<p class="mt-3 text-sm text-danger">{{ $message }}</p>@enderror
     <label class="mt-4 block"><span class="mb-1 block text-sm font-medium text-text">ملاحظات</span><textarea name="notes" rows="2" class="clinic-field w-full">{{ old('notes') }}</textarea></label>
     <div class="mt-5 flex justify-end gap-2">
-        @if($workspaceMode)@if($embeddedWorkspace)<button type="button" class="clinic-btn-secondary" @click="panel = null">إلغاء</button>@else<a href="{{ route('patients.workspace', $patient) }}" class="clinic-btn-secondary">إلغاء</a>@endif @else<a href="{{ route('invoices.index') }}" class="clinic-btn-secondary">إلغاء</a>@endif
+        @if($workspaceMode)@if($embeddedWorkspace)<button type="button" class="clinic-btn-secondary" @click="closePanel('invoice')">إلغاء</button>@else<a href="{{ route('patients.workspace', $patient) }}" class="clinic-btn-secondary">إلغاء</a>@endif @else<a href="{{ route('invoices.index') }}" class="clinic-btn-secondary">إلغاء</a>@endif
         <button type="submit" class="clinic-btn-primary" :disabled="mode === 'plan' && planOptions.length === 0">حفظ الفاتورة</button>
     </div>
 </form>

@@ -11,7 +11,7 @@ class TherapySession extends Model
 
     protected $fillable = [
         'therapy_program_id', 'appointment_id', 'session_date', 'session_number',
-        'duration_minutes', 'status', 'notes', 'goals_achieved', 'next_session_plan', 'internal_notes'
+        'duration_minutes', 'status', 'notes', 'goals_achieved', 'next_session_plan', 'internal_notes',
     ];
 
     public function program()
@@ -22,6 +22,11 @@ class TherapySession extends Model
     public function appointment()
     {
         return $this->belongsTo(Appointment::class);
+    }
+
+    public function earning()
+    {
+        return $this->hasOne(TherapistEarning::class);
     }
 
     public function homeTasks()

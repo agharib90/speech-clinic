@@ -19,6 +19,12 @@ final class PatientAccess
                 $programQuery->where('therapist_id', $user->id);
             })->orWhereHas('appointments', function (Builder $appointmentQuery) use ($user) {
                 $appointmentQuery->where('therapist_id', $user->id);
+            })->orWhereHas('clinicalEvaluationAssignments', function (Builder $assignmentQuery) use ($user) {
+                $assignmentQuery->where('assigned_to', $user->id)
+                    ->whereIn('status', ['pending', 'in_progress']);
+            })->orWhereHas('clinicalEvaluations', function (Builder $evaluationQuery) use ($user) {
+                $evaluationQuery->where('evaluated_by', $user->id)
+                    ->orWhere('completed_by', $user->id);
             });
         });
     }
@@ -34,6 +40,16 @@ final class PatientAccess
             ->exists()
             || $patient->appointments()
                 ->where('therapist_id', $user->id)
+                ->exists()
+            || $patient->clinicalEvaluationAssignments()
+                ->where('assigned_to', $user->id)
+                ->whereIn('status', ['pending', 'in_progress'])
+                ->exists()
+            || $patient->clinicalEvaluations()
+                ->where(function ($query) use ($user) {
+                    $query->where('evaluated_by', $user->id)
+                        ->orWhere('completed_by', $user->id);
+                })
                 ->exists();
 
         abort_unless($hasAccess, 403);

@@ -6,6 +6,7 @@ use App\Models\Service;
 use App\Models\Specialty;
 use App\Models\Therapist;
 use App\Models\TherapistServiceRate;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -73,6 +74,26 @@ class TherapistServiceController extends Controller
         }
         $request->validate($rateRules);
 
+        foreach ($services as $service) {
+            $rate = $request->input("rates.{$service->id}");
+            $effectiveFrom = CarbonImmutable::parse($rate['effective_from'])->toDateString();
+            $existingRate = TherapistServiceRate::query()
+                ->where('therapist_id', $therapist->id)
+                ->where('service_id', $service->id)
+                ->whereDate('effective_from', $effectiveFrom)
+                ->first();
+
+            if ($existingRate && (float) $existingRate->amount !== (float) $rate['amount']) {
+                throw ValidationException::withMessages([
+                    "rates.{$service->id}.effective_from" => sprintf(
+                        'يوجد استحقاق مسجل لهذه الخدمة يبدأ من %s بقيمة %s ج.م. لا يمكن استبداله بسعر مختلف من نفس التاريخ. اختر تاريخ سريان جديدًا للحفاظ على سجل الاستحقاقات.',
+                        $existingRate->effective_from->format('d/m/Y'),
+                        number_format((float) $existingRate->amount, 2)
+                    ),
+                ]);
+            }
+        }
+
         DB::transaction(function () use ($request, $therapist, $specialtyIds, $serviceIds, $services) {
             $therapist->specialties()->sync($specialtyIds);
             $therapist->services()->sync($serviceIds);
@@ -90,6 +111,8 @@ class TherapistServiceController extends Controller
             }
         });
 
-        return back()->with('success', 'تم حفظ تخصصات وخدمات واستحقاقات الأخصائي بنجاح');
+        return back()
+            ->with('success', 'تم حفظ تخصصات وخدمات واستحقاقات الأخصائي بنجاح')
+            ->with('workspace_tab', 'services');
     }
 }

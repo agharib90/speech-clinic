@@ -95,17 +95,31 @@
                                 @if($appointment->status == 'مجدول')
                                     <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">مجدول</span>
 
-                                    <!-- أزرار تغيير الحالة -->
-                                    <form action="{{ route('appointments.updateStatus', $appointment) }}" method="POST">
-                                        @csrf
-                                        @if($appointment->patient_service_plan_item_id)
-                                            <span class="px-2 py-1 text-xs text-text-muted">الإتمام من مسار الخدمة</span>
-                                        @else
-                                            <button type="submit" name="status" value="مكتمل" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">مكتمل</button>
+                                    @if($appointment->patient_service_plan_item_id)
+                                        @php($completionState = $appointment->service_completion_state)
+                                        @if($appointment->checkin)
+                                            <span class="rounded-full bg-success-soft px-2 py-1 text-xs font-semibold text-success">تم تأكيد الحضور</span>
                                         @endif
-                                        <button type="submit" name="status" value="غياب" class="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded">غياب</button>
-                                        <button type="submit" name="status" value="ملغى" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">إلغاء</button>
-                                    </form>
+                                        <span class="px-2 py-1 text-xs text-text-muted">{{ $completionState['label'] }}</span>
+                                        @if($completionState['can_complete'])
+                                            <form action="{{ route('appointments.complete-service', $appointment) }}" method="POST">
+                                                @csrf
+                                                <button type="submit" class="clinic-btn-primary">إتمام الخدمة</button>
+                                            </form>
+                                        @endif
+                                        <form action="{{ route('appointments.updateStatus', $appointment) }}" method="POST" class="flex gap-2">
+                                            @csrf
+                                            <button type="submit" name="status" value="غياب" class="rounded-lg bg-warning-soft px-2 py-1 text-xs font-semibold text-warning">غياب</button>
+                                            <button type="submit" name="status" value="ملغى" class="rounded-lg bg-danger-soft px-2 py-1 text-xs font-semibold text-danger">إلغاء</button>
+                                        </form>
+                                    @else
+                                        <form action="{{ route('appointments.updateStatus', $appointment) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" name="status" value="مكتمل" class="text-xs bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded">مكتمل</button>
+                                            <button type="submit" name="status" value="غياب" class="text-xs bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded">غياب</button>
+                                            <button type="submit" name="status" value="ملغى" class="text-xs bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded">إلغاء</button>
+                                        </form>
+                                    @endif
                                 @elseif($appointment->status == 'مكتمل')
                                     <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">مكتمل</span>
                                 @elseif($appointment->status == 'غياب')

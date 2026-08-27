@@ -7,6 +7,7 @@ use App\Models\Patient;
 use App\Models\PatientServicePlan;
 use App\Models\Service;
 use App\Services\PatientServicePlanAllocator;
+use App\Services\PatientServicePlanPricingService;
 use App\Support\PatientWorkspaceContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +16,8 @@ use Illuminate\Validation\ValidationException;
 
 class PatientServicePlanController extends Controller
 {
+    public function __construct(private readonly PatientServicePlanPricingService $pricingService) {}
+
     public function index(Patient $patient)
     {
         $plans = $patient->servicePlans()
@@ -63,7 +66,10 @@ class PatientServicePlanController extends Controller
         ]);
 
         $plan = DB::transaction(function () use ($data, $patient, $request) {
-            $preparedItems = $this->prepareNewItems($request, $data['items']);
+            $preparedItems = $this->pricingService->prepareNewItems(
+                $data['items'],
+                $request->user()->can('manage patient discounts')
+            );
             $plan = $patient->servicePlans()->create([
                 'status' => PatientServicePlan::STATUS_DRAFT,
                 'starts_at' => $data['starts_at'] ?? null,
@@ -80,7 +86,7 @@ class PatientServicePlanController extends Controller
         });
 
         if ($fromWorkspace) {
-            return redirect()->route('patients.workspace', $patient)
+            return redirect()->route('patients.workspace', ['patient' => $patient, 'section' => 'plan'])
                 ->with('success', 'تم إنشاء خطة الخدمات كمسودة.');
         }
 
@@ -137,6 +143,10 @@ class PatientServicePlanController extends Controller
     {
         $fromWorkspace = PatientWorkspaceContext::validate($request, (int) $patientServicePlan->patient_id);
 
+        if ($patientServicePlan->isClinicallyApproved() && ! $patientServicePlan->hasProtectedHistory()) {
+            return $this->updateClinicallyApprovedPlan($request, $patientServicePlan, $fromWorkspace);
+        }
+
         if (! $patientServicePlan->canFullyEdit()) {
             $this->rejectProtectedStructureChanges($request);
             $data = $request->validate(['notes' => ['nullable', 'string', 'max:3000']]);
@@ -144,7 +154,9 @@ class PatientServicePlanController extends Controller
 
             return redirect()->route(
                 $fromWorkspace ? 'patients.workspace' : 'patient-service-plans.show',
-                $fromWorkspace ? $patientServicePlan->patient_id : $patientServicePlan
+                $fromWorkspace
+                    ? ['patient' => $patientServicePlan->patient_id, 'section' => 'plan']
+                    : $patientServicePlan
             )
                 ->with('success', 'تم تحديث ملاحظات الخطة.');
         }
@@ -160,11 +172,15 @@ class PatientServicePlanController extends Controller
                 ]);
             }
 
-            $preparedItems = $this->prepareItems($request, $lockedPlan, $data['items']);
+            $preparedItems = $this->pricingService->prepareExistingItems(
+                $lockedPlan,
+                $data['items'],
+                $request->user()->can('manage patient discounts')
+            );
 
             $lockedPlan->update([
-                'starts_at' => $data['starts_at'] ?? null,
-                'ends_at' => $data['ends_at'] ?? null,
+                'starts_at' => array_key_exists('starts_at', $data) ? $data['starts_at'] : $lockedPlan->starts_at,
+                'ends_at' => array_key_exists('ends_at', $data) ? $data['ends_at'] : $lockedPlan->ends_at,
                 'notes' => $data['notes'] ?? null,
             ]);
             $lockedPlan->items()->delete();
@@ -176,7 +192,9 @@ class PatientServicePlanController extends Controller
 
         return redirect()->route(
             $fromWorkspace ? 'patients.workspace' : 'patient-service-plans.show',
-            $fromWorkspace ? $patientServicePlan->patient_id : $patientServicePlan
+            $fromWorkspace
+                ? ['patient' => $patientServicePlan->patient_id, 'section' => 'plan']
+                : $patientServicePlan
         )
             ->with('success', 'تم تحديث خطة الخدمات بنجاح.');
     }
@@ -190,7 +208,7 @@ class PatientServicePlanController extends Controller
 
             if (! $lockedPlan->canDelete()) {
                 throw ValidationException::withMessages([
-                    'plan' => 'يمكن حذف المسودة غير المستخدمة فقط. لا يمكن حذف خطة نشطة أو خطة لها دفعات أو استخدام.',
+                    'plan' => 'يمكن حذف المسودة غير المستخدمة وغير المعتمدة سريريًا فقط.',
                 ]);
             }
 
@@ -206,16 +224,29 @@ class PatientServicePlanController extends Controller
     {
         $fromWorkspace = PatientWorkspaceContext::validate($request, (int) $patientServicePlan->patient_id);
 
-        if ($patientServicePlan->status !== PatientServicePlan::STATUS_DRAFT || ! $patientServicePlan->items()->exists()) {
-            throw ValidationException::withMessages([
-                'status' => 'لا يمكن تفعيل هذه الخطة.',
-            ]);
-        }
+        DB::transaction(function () use ($patientServicePlan) {
+            $lockedPlan = PatientServicePlan::query()->lockForUpdate()->findOrFail($patientServicePlan->id);
 
-        $patientServicePlan->update(['status' => PatientServicePlan::STATUS_ACTIVE]);
+            if ($lockedPlan->status !== PatientServicePlan::STATUS_DRAFT || ! $lockedPlan->items()->exists()) {
+                throw ValidationException::withMessages([
+                    'status' => 'لا يمكن تفعيل هذه الخطة.',
+                ]);
+            }
+
+            if ($lockedPlan->clinical_evaluation_id !== null && ! $lockedPlan->isClinicallyApproved()) {
+                throw ValidationException::withMessages([
+                    'status' => 'يجب اعتماد الخطة سريريًا وتسليمها للاستقبال قبل تفعيلها.',
+                ]);
+            }
+
+            $lockedPlan->update(['status' => PatientServicePlan::STATUS_ACTIVE]);
+        });
 
         if ($fromWorkspace) {
-            return redirect()->route('patients.workspace', $patientServicePlan->patient_id)
+            return redirect()->route('patients.workspace', [
+                'patient' => $patientServicePlan->patient_id,
+                'section' => 'plan',
+            ])
                 ->with('success', 'تم تفعيل خطة الخدمات.');
         }
 
@@ -240,7 +271,10 @@ class PatientServicePlanController extends Controller
         );
 
         if ($fromWorkspace) {
-            return redirect()->route('patients.workspace', $patientServicePlan->patient_id)
+            return redirect()->route('patients.workspace', [
+                'patient' => $patientServicePlan->patient_id,
+                'section' => 'plan',
+            ])
                 ->with('success', 'تم تخصيص الدفعة على خدمات الخطة بالترتيب.');
         }
 
@@ -274,122 +308,81 @@ class PatientServicePlanController extends Controller
         ];
     }
 
-    private function prepareNewItems(Request $request, array $items): array
-    {
-        $services = $this->lockedServicesFor($items);
-        $canManageDiscounts = $request->user()->can('manage patient discounts');
-
-        return collect($items)
-            ->sortBy('position')
-            ->values()
-            ->map(function (array $item, int $index) use ($services, $canManageDiscounts) {
-                $priceCents = $this->officialPriceCents($services->get($item['service_id']), $index);
-                $discountCents = PatientServicePlanAllocator::decimalToCents(
-                    (string) ($item['discount_amount'] ?? '0')
-                );
-
-                abort_if($discountCents > 0 && ! $canManageDiscounts, 403);
-                $this->validateDiscount($discountCents, $priceCents, $index);
-
-                return $this->preparedItem($item, $index + 1, $priceCents, $discountCents);
-            })
-            ->all();
-    }
-
-    private function prepareItems(Request $request, PatientServicePlan $plan, array $items): array
-    {
-        $existingItems = $plan->items()->get()->keyBy('id');
-        $services = $this->lockedServicesFor($items);
-        $canManageDiscounts = $request->user()->can('manage patient discounts');
-
-        return collect($items)
-            ->sortBy('position')
-            ->values()
-            ->map(function (array $item, int $index) use ($existingItems, $services, $canManageDiscounts) {
-                $existingItem = isset($item['id']) ? $existingItems->get($item['id']) : null;
-
-                if (isset($item['id']) && ! $existingItem) {
-                    throw ValidationException::withMessages([
-                        "items.{$index}.id" => 'بند الخطة المحدد غير صالح.',
-                    ]);
-                }
-
-                $priceCents = $existingItem && (int) $existingItem->service_id === (int) $item['service_id']
-                    ? PatientServicePlanAllocator::decimalToCents($existingItem->customer_unit_price)
-                    : $this->officialPriceCents($services->get($item['service_id']), $index);
-                $existingDiscount = $existingItem
-                    ? PatientServicePlanAllocator::decimalToCents($existingItem->discount_amount)
-                    : 0;
-                $hasSubmittedDiscount = array_key_exists('discount_amount', $item);
-                $submittedDiscount = $hasSubmittedDiscount
-                    ? PatientServicePlanAllocator::decimalToCents((string) ($item['discount_amount'] ?? '0'))
-                    : $existingDiscount;
-
-                if (! $canManageDiscounts && $hasSubmittedDiscount && $submittedDiscount !== $existingDiscount) {
-                    throw ValidationException::withMessages([
-                        "items.{$index}.discount_amount" => 'ليس لديك صلاحية تعديل خصم العميل.',
-                    ]);
-                }
-
-                $discountCents = $canManageDiscounts ? $submittedDiscount : $existingDiscount;
-
-                $this->validateDiscount($discountCents, $priceCents, $index);
-
-                return $this->preparedItem($item, $index + 1, $priceCents, $discountCents);
-            })
-            ->all();
-    }
-
-    private function lockedServicesFor(array $items)
-    {
-        return Service::query()
-            ->whereIn('id', collect($items)->pluck('service_id')->filter()->unique())
-            ->lockForUpdate()
-            ->get()
-            ->keyBy('id');
-    }
-
-    private function officialPriceCents(?Service $service, int $index): int
-    {
-        $priceCents = $service?->customer_price === null
-            ? 0
-            : PatientServicePlanAllocator::decimalToCents($service->customer_price);
-
-        if ($priceCents <= 0) {
-            throw ValidationException::withMessages([
-                "items.{$index}.service_id" => 'هذه الخدمة لا تحتوي على سعر عميل معتمد. يرجى تحديد السعر من إعدادات الخدمات أولًا.',
-            ]);
-        }
-
-        return $priceCents;
-    }
-
-    private function validateDiscount(int $discountCents, int $priceCents, int $index): void
-    {
-        if ($discountCents >= $priceCents) {
-            throw ValidationException::withMessages([
-                "items.{$index}.discount_amount" => 'يجب أن يكون الخصم أقل من سعر الوحدة.',
-            ]);
-        }
-    }
-
-    private function preparedItem(array $item, int $position, int $priceCents, int $discountCents): array
-    {
-        return [
-            'service_id' => $item['service_id'],
-            'position' => $position,
-            'planned_quantity' => $item['planned_quantity'],
-            'customer_unit_price' => PatientServicePlanAllocator::centsToDecimal($priceCents),
-            'discount_amount' => PatientServicePlanAllocator::centsToDecimal($discountCents),
-            'final_unit_price' => PatientServicePlanAllocator::centsToDecimal($priceCents - $discountCents),
-        ];
-    }
-
     private function rejectProtectedStructureChanges(Request $request): void
     {
         if ($request->hasAny(['starts_at', 'ends_at', 'items'])) {
             throw ValidationException::withMessages([
                 'plan' => 'لا يمكن تعديل بنود أو أسعار الخطة بعد تسجيل دفعة أو استخدام خدمة. يمكنك تعديل الملاحظات فقط.',
+            ]);
+        }
+    }
+
+    private function updateClinicallyApprovedPlan(
+        Request $request,
+        PatientServicePlan $patientServicePlan,
+        bool $fromWorkspace
+    ) {
+        $data = $request->validate($this->planRules($patientServicePlan));
+
+        DB::transaction(function () use ($data, $patientServicePlan, $request) {
+            $lockedPlan = PatientServicePlan::query()->lockForUpdate()->findOrFail($patientServicePlan->id);
+
+            if (! $lockedPlan->isClinicallyApproved() || $lockedPlan->hasProtectedHistory()) {
+                throw ValidationException::withMessages([
+                    'plan' => 'لم تعد الشروط المالية لهذه الخطة قابلة للتعديل.',
+                ]);
+            }
+
+            $this->assertApprovedClinicalStructureUnchanged($lockedPlan, $data['items']);
+            $preparedItems = $this->pricingService->prepareExistingItems(
+                $lockedPlan,
+                $data['items'],
+                $request->user()->can('manage patient discounts')
+            );
+
+            $lockedPlan->update([
+                'starts_at' => array_key_exists('starts_at', $data) ? $data['starts_at'] : $lockedPlan->starts_at,
+                'ends_at' => array_key_exists('ends_at', $data) ? $data['ends_at'] : $lockedPlan->ends_at,
+                'notes' => $data['notes'] ?? null,
+            ]);
+
+            foreach ($preparedItems as $item) {
+                $lockedPlan->items()
+                    ->where('position', $item['position'])
+                    ->update([
+                        'discount_amount' => $item['discount_amount'],
+                        'final_unit_price' => $item['final_unit_price'],
+                    ]);
+            }
+        });
+
+        return redirect()->route(
+            $fromWorkspace ? 'patients.workspace' : 'patient-service-plans.show',
+            $fromWorkspace
+                ? ['patient' => $patientServicePlan->patient_id, 'section' => 'plan']
+                : $patientServicePlan
+        )->with('success', 'تم تحديث الشروط المالية مع الحفاظ على الخطة السريرية المعتمدة.');
+    }
+
+    private function assertApprovedClinicalStructureUnchanged(PatientServicePlan $plan, array $submittedItems): void
+    {
+        $existing = $plan->items()->orderBy('position')->get()->values();
+        $submitted = collect($submittedItems)->sortBy('position')->values();
+
+        $changed = $existing->count() !== $submitted->count()
+            || $existing->contains(function ($item, int $index) use ($submitted) {
+                $submittedItem = $submitted->get($index);
+
+                return ! $submittedItem
+                    || (int) ($submittedItem['id'] ?? 0) !== $item->id
+                    || (int) $submittedItem['service_id'] !== $item->service_id
+                    || (int) $submittedItem['planned_quantity'] !== $item->planned_quantity
+                    || (int) $submittedItem['position'] !== $item->position;
+            });
+
+        if ($changed) {
+            throw ValidationException::withMessages([
+                'plan' => 'لا يمكن تغيير الخدمات أو الكميات أو ترتيب الخطة بعد اعتمادها سريريًا.',
             ]);
         }
     }

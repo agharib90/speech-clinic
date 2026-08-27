@@ -6,19 +6,38 @@ use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use App\Models\Guardian;
 use App\Models\Patient;
+use App\Models\PatientClinicalEvaluation;
+use App\Models\PatientClinicalEvaluationAssignment;
+use App\Models\PatientServicePlan;
+use App\Services\PatientClinicalStageResolver;
 use App\Services\PatientWorkspaceBuilder;
 use App\Support\PatientAccess;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class PatientController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, PatientClinicalStageResolver $stageResolver)
     {
         $search = $request->input('search');
-        $query = Patient::with('guardian');
+        $stage = $request->string('stage')->toString();
+        $stage = array_key_exists($stage, PatientClinicalStageResolver::FILTERS) ? $stage : '';
+        $query = Patient::with([
+            'guardian',
+            'clinicalEvaluationAssignments' => fn ($assignment) => $assignment
+                ->whereIn('status', PatientClinicalEvaluationAssignment::OPEN_STATUSES)
+                ->with('assignee'),
+            'clinicalEvaluations.servicePlans',
+            'servicePlans',
+        ]);
         PatientAccess::scope($query, $request->user());
+
+        if ($stage) {
+            $stageResolver->applyFilter($query, $stage);
+        }
 
         $patients = $query
             ->when($search, function ($query) use ($search) {
@@ -29,40 +48,135 @@ class PatientController extends Controller
                             $q->where('name', 'like', "%{$search}%");
                         });
                 });
-            })->latest()->paginate(10);
+            })->latest()->paginate(10)->withQueryString();
 
-        return view('patients.index', compact('patients'));
+        $patients->getCollection()->each(function (Patient $patient) use ($request, $stageResolver) {
+            $assignment = $patient->clinicalEvaluationAssignments->sortByDesc('id')->first();
+            $evaluation = $patient->clinicalEvaluations
+                ->where('status', PatientClinicalEvaluation::STATUS_DRAFT)
+                ->sortByDesc('id')
+                ->first()
+                ?: $patient->clinicalEvaluations
+                    ->where('status', PatientClinicalEvaluation::STATUS_COMPLETED)
+                    ->sortByDesc(fn ($item) => $item->completed_at?->timestamp ?? $item->id)
+                    ->first();
+            if ($assignment?->isPending() && ! $assignment->clinical_evaluation_id) {
+                $evaluation = null;
+            }
+            $clinicalPlan = $evaluation?->servicePlans->sortByDesc('id')->first();
+            $approvedPlan = $evaluation?->servicePlans
+                ->whereNotNull('clinical_approved_at')
+                ->sortByDesc(fn ($plan) => $plan->clinical_approved_at?->timestamp ?? $plan->id)
+                ->first();
+            $activePlan = $patient->servicePlans
+                ->where('status', PatientServicePlan::STATUS_ACTIVE)
+                ->sortByDesc('id')
+                ->first();
+            $legacyDraftPlan = $patient->servicePlans
+                ->where('status', PatientServicePlan::STATUS_DRAFT)
+                ->whereNull('clinical_evaluation_id')
+                ->sortByDesc('id')
+                ->first();
+
+            $patient->setAttribute('clinical_stage', $stageResolver->resolve(
+                $request->user(), $assignment, $evaluation, $clinicalPlan, $approvedPlan, $activePlan, $legacyDraftPlan
+            ));
+        });
+
+        return view('patients.index', compact('patients', 'stage'));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        // جلب أولياء الأمور لاختيار أحدهم عند إنشاء المريض
-        $guardians = Guardian::pluck('name', 'id');
+        $selectedGuardian = null;
+        $duplicateGuardian = null;
 
-        return view('patients.create', compact('guardians'));
+        if ($guardianId = $request->old('guardian_id')) {
+            $selectedGuardian = Guardian::query()
+                ->select(['id', 'name', 'phone'])
+                ->find($guardianId);
+        }
+
+        if ($request->old('guardian_mode') === 'new' && $phone = $request->old('guardian.phone')) {
+            $duplicateGuardian = Guardian::query()
+                ->select(['id', 'name', 'phone'])
+                ->withCount('patients')
+                ->where('phone', $phone)
+                ->first();
+        }
+
+        return view('patients.create', compact('selectedGuardian', 'duplicateGuardian'));
+    }
+
+    public function guardianSearch(Request $request)
+    {
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'min:2', 'max:100'],
+        ]);
+        $search = trim($validated['query']);
+
+        $guardians = Guardian::query()
+            ->select(['id', 'name', 'phone'])
+            ->withCount('patients')
+            ->where(function ($query) use ($search) {
+                $query->whereRaw('INSTR(name, ?) > 0', [$search])
+                    ->orWhereRaw('INSTR(phone, ?) > 0', [$search]);
+            })
+            ->orderBy('name')
+            ->limit(10)
+            ->get();
+
+        return response()->json(['data' => $guardians]);
     }
 
     public function store(StorePatientRequest $request)
     {
         $data = $request->validated();
+        $patientData = Arr::only($data, [
+            'name',
+            'birth_date',
+            'gender',
+            'diagnosis',
+            'referral_source',
+            'notes',
+        ]);
+        $patientData['is_active'] = $request->has('is_active');
 
-        $data['is_active'] = $request->has('is_active') ? 1 : 0;
+        $patient = DB::transaction(function () use ($data, $patientData) {
+            if ($data['guardian_mode'] === 'new') {
+                $duplicateGuardian = Guardian::query()
+                    ->where('phone', $data['guardian']['phone'])
+                    ->lockForUpdate()
+                    ->first();
 
-        DB::transaction(function () use ($data) {
-            $data['barcode'] = 'TMP-'.Str::uuid();
-            $data['qr_code'] = $data['barcode'];
+                if ($duplicateGuardian) {
+                    throw ValidationException::withMessages([
+                        'guardian.phone' => 'رقم الهاتف مسجل لولي أمر موجود. ابحث عنه واختر سجله بدلًا من إنشاء سجل مكرر.',
+                    ]);
+                }
 
-            $patient = Patient::create($data);
+                $guardian = Guardian::create($data['guardian']);
+                $patientData['guardian_id'] = $guardian->id;
+            } else {
+                $patientData['guardian_id'] = $data['guardian_id'];
+            }
+
+            $patientData['barcode'] = 'TMP-'.Str::uuid();
+            $patientData['qr_code'] = $patientData['barcode'];
+
+            $patient = Patient::create($patientData);
             $barcode = 'PAT-'.str_pad($patient->id, 5, '0', STR_PAD_LEFT);
 
             $patient->update([
                 'barcode' => $barcode,
                 'qr_code' => $barcode,
             ]);
+
+            return $patient;
         });
 
-        return redirect()->route('patients.index')
-            ->with('success', 'تم تسجيل الطفل وتوليد الباركود بنجاح');
+        return redirect()->route('patients.workspace', $patient)
+            ->with('success', 'تم حفظ الحالة وتوليد الباركود بنجاح');
     }
 
     public function show(Patient $patient)

@@ -6,8 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 
 class TherapistEarning extends Model
 {
+    protected $casts = [
+        'amount' => 'decimal:2',
+    ];
+
     protected $fillable = [
-        'therapist_id', 'therapy_session_id', 'amount', 'type'
+        'therapist_id', 'therapy_session_id', 'amount', 'type',
     ];
 
     public function therapist()

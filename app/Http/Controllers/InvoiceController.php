@@ -116,7 +116,10 @@ class InvoiceController extends Controller
         });
 
         if ($fromWorkspace) {
-            return redirect()->route('patients.workspace', $request->integer('patient_id'))
+            return redirect()->route('patients.workspace', [
+                'patient' => $request->integer('patient_id'),
+                'section' => 'finance',
+            ])
                 ->with('success', 'تم إنشاء الفاتورة بنجاح');
         }
 
@@ -219,7 +222,10 @@ class InvoiceController extends Controller
         });
 
         if ($fromWorkspace) {
-            return redirect()->route('patients.workspace', $invoice->patient_id)
+            return redirect()->route('patients.workspace', [
+                'patient' => $invoice->patient_id,
+                'section' => 'finance',
+            ])
                 ->with('success', 'تم تسجيل الدفعة بنجاح');
         }
 

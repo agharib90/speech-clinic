@@ -13,18 +13,28 @@ class StoreGuardianRequest extends FormRequest
 
     public function rules(): array
     {
+        return static::guardianRules();
+    }
+
+    public static function guardianRules(): array
+    {
         return [
-            'name'       => 'required|string|max:255',
-            'phone'      => 'required|string|max:20',
-            'phone2'     => 'nullable|string|max:20',
-            'email'      => 'nullable|email|max:255',
-            'address'    => 'nullable|string|max:255',
-            'national_id'=> 'nullable|string|unique:guardians,national_id',
-            'notes'      => 'nullable|string',
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'phone2' => 'nullable|string|max:20',
+            'email' => 'nullable|email|max:255',
+            'address' => 'nullable|string|max:255',
+            'national_id' => 'nullable|string|unique:guardians,national_id',
+            'notes' => 'nullable|string',
         ];
     }
 
     public function messages(): array
+    {
+        return static::guardianMessages();
+    }
+
+    public static function guardianMessages(): array
     {
         return [
             'name.required' => 'اسم ولي الأمر مطلوب',

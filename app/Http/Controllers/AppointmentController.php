@@ -17,6 +17,7 @@ use App\Models\TherapySession;
 use App\Models\User;
 use App\Services\AppointmentAvailabilityService;
 use App\Services\AppointmentServicePlanBookingService;
+use App\Services\PatientServiceCompletionService;
 use App\Services\PatientServicePlanAllocator;
 use App\Support\PatientWorkspaceContext;
 use Carbon\Carbon;
@@ -26,7 +27,7 @@ use Illuminate\Validation\ValidationException;
 
 class AppointmentController extends Controller
 {
-    public function index(Request $request)
+    public function index(Request $request, PatientServiceCompletionService $completionService)
     {
         $user = $request->user();
         $dateFilter = $request->input('date', today()->format('Y-m-d'));
@@ -41,7 +42,10 @@ class AppointmentController extends Controller
             'patient',
             'therapist',
             'sessionType',
-            'patientServicePlanItem.service.specialty'
+            'patientServicePlanItem.service.specialty',
+            'patientServicePlanItem.plan',
+            'checkin',
+            'therapySession'
         )
             ->whereDate('scheduled_at', $dateFilter)
             ->when($therapistFilter, function ($query) use ($therapistFilter) {
@@ -49,7 +53,13 @@ class AppointmentController extends Controller
             })
             ->when($requestedPatientId, fn ($query) => $query->where('patient_id', $requestedPatientId))
             ->orderBy('scheduled_at')
-            ->get();
+            ->get()
+            ->each(function (Appointment $appointment) use ($completionService, $user) {
+                $appointment->setAttribute(
+                    'service_completion_state',
+                    $completionService->state($appointment, $user)
+                );
+            });
 
         $therapists = User::role('أخصائي تخاطب')
             ->when($user->hasRole('أخصائي تخاطب'), function ($query) use ($user) {
@@ -150,7 +160,10 @@ class AppointmentController extends Controller
             $appointment = $bookingService->book($validated);
 
             if ($fromWorkspace) {
-                return redirect()->route('patients.workspace', $appointment->patient_id)
+                return redirect()->route('patients.workspace', [
+                    'patient' => $appointment->patient_id,
+                    'section' => 'appointments',
+                ])
                     ->with('success', 'تم حجز الموعد وتأكيده ماليًا بنجاح');
             }
 

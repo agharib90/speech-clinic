@@ -67,6 +67,7 @@ class DemoDataSeeder extends Seeder
             'view finance', 'manage invoices', 'manage quotations', 'manage packages',
             'view hr', 'manage therapists', 'manage payroll',
             'manage specialties', 'manage services', 'manage therapist services',
+            'manage clinical evaluations',
             'manage patient service plans', 'manage patient discounts',
             'manage inventory', 'manage suppliers',
             'view reports', 'manage settings',
@@ -93,6 +94,7 @@ class DemoDataSeeder extends Seeder
                 'view patients',
                 'view appointments', 'edit appointments',
                 'view therapy', 'create therapy', 'edit therapy',
+                'manage clinical evaluations',
                 'manage milestones', 'manage home tasks',
             ],
         ];
@@ -104,7 +106,7 @@ class DemoDataSeeder extends Seeder
 
         $admin = User::where('email', 'admin@clinic.com')->first();
         if (! $admin) {
-            $adminPassword = 'Admin-' . str()->random(10);
+            $adminPassword = 'Admin-'.str()->random(10);
             $admin = User::create([
                 'name' => 'مدير النظام',
                 'email' => 'admin@clinic.com',

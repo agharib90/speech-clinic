@@ -6,6 +6,8 @@ use App\Models\Appointment;
 use App\Models\Invoice;
 use App\Models\InvoicePayment;
 use App\Models\Patient;
+use App\Models\PatientClinicalEvaluation;
+use App\Models\PatientClinicalEvaluationAssignment;
 use App\Models\PatientServicePlan;
 use App\Models\PatientServicePlanItem;
 use App\Models\Service;
@@ -16,7 +18,10 @@ use Illuminate\Support\Collection;
 class PatientWorkspaceBuilder
 {
     public function __construct(
-        private readonly AppointmentServicePlanBookingService $bookingService
+        private readonly AppointmentServicePlanBookingService $bookingService,
+        private readonly PatientServiceCompletionService $completionService,
+        private readonly PatientClinicalStageResolver $clinicalStageResolver,
+        private readonly PatientClinicalEvaluationAssignmentService $assignmentService
     ) {}
 
     public function build(Patient $patient, User $user): array
@@ -28,6 +33,37 @@ class PatientWorkspaceBuilder
                 ->withCount(['sessions', 'attachments'])
                 ->latest(),
         ]);
+
+        $openAssignment = $patient->clinicalEvaluationAssignments()
+            ->with(['assignee.therapist', 'assigner', 'clinicalEvaluation'])
+            ->whereIn('status', PatientClinicalEvaluationAssignment::OPEN_STATUSES)
+            ->latest('id')
+            ->first();
+
+        $draftEvaluation = $patient->clinicalEvaluations()
+            ->with(['evaluator', 'completer'])
+            ->where('status', PatientClinicalEvaluation::STATUS_DRAFT)
+            ->latest('id')
+            ->first();
+        $latestCompletedEvaluation = $patient->clinicalEvaluations()
+            ->with(['evaluator', 'completer'])
+            ->where('status', PatientClinicalEvaluation::STATUS_COMPLETED)
+            ->latest('completed_at')
+            ->latest('id')
+            ->first();
+        $currentEvaluation = ($openAssignment?->isPending() && ! $openAssignment->clinical_evaluation_id)
+            ? null
+            : ($draftEvaluation ?: $latestCompletedEvaluation);
+        $clinicalPlan = $currentEvaluation?->servicePlans()
+            ->with('items.service.specialty')
+            ->latest('id')
+            ->first();
+        $clinicallyApprovedPlan = $currentEvaluation?->servicePlans()
+            ->whereNotNull('clinical_approved_at')
+            ->with('items.service.specialty')
+            ->latest('clinical_approved_at')
+            ->latest('id')
+            ->first();
 
         $activePlan = $patient->servicePlans()
             ->where('status', PatientServicePlan::STATUS_ACTIVE)
@@ -42,7 +78,21 @@ class PatientWorkspaceBuilder
             ->latest('id')
             ->first();
 
-        $currentPlan = $activePlan ?: $patient->servicePlans()
+        $legacyDraftPlan = $patient->servicePlans()
+            ->where('status', PatientServicePlan::STATUS_DRAFT)
+            ->whereNull('clinical_evaluation_id')
+            ->with([
+                'items.service.specialty',
+                'items.service.therapists' => fn ($query) => $query
+                    ->where('therapists.is_active', true)
+                    ->whereNotNull('therapists.user_id'),
+                'planPayments.invoicePayment.invoice',
+                'planPayments.allocations.item',
+            ])
+            ->latest('id')
+            ->first();
+
+        $currentPlan = $activePlan ?: $clinicallyApprovedPlan ?: $legacyDraftPlan ?: $patient->servicePlans()
             ->where('status', PatientServicePlan::STATUS_DRAFT)
             ->with([
                 'items.service.specialty',
@@ -64,10 +114,23 @@ class PatientWorkspaceBuilder
             ->get();
 
         $patientAppointments = $patient->appointments()
-            ->with(['therapist', 'sessionType', 'patientServicePlanItem.service'])
+            ->with([
+                'therapist',
+                'sessionType',
+                'patientServicePlanItem.service',
+                'patientServicePlanItem.plan',
+                'checkin',
+                'therapySession',
+            ])
             ->latest('scheduled_at')
             ->limit(10)
-            ->get();
+            ->get()
+            ->each(function (Appointment $appointment) use ($user) {
+                $appointment->setAttribute(
+                    'service_completion_state',
+                    $this->completionService->state($appointment, $user)
+                );
+            });
 
         $invoices = Invoice::query()
             ->with(['items', 'payments'])
@@ -126,12 +189,26 @@ class PatientWorkspaceBuilder
         $financial = $this->financialSummary($plan, $unallocatedPayments);
         $invoiceFinancial = $this->invoiceFinancialSummary($patient);
 
-        $services = $user->can('manage patient service plans')
+        $clinical = $this->clinicalStageResolver->resolve(
+            $user,
+            $openAssignment,
+            $currentEvaluation,
+            $clinicalPlan,
+            $clinicallyApprovedPlan,
+            $activePlan,
+            $legacyDraftPlan
+        );
+
+        $services = ($user->can('manage patient service plans') || $user->can('manage clinical evaluations'))
             ? Service::query()
                 ->with('specialty')
                 ->where('is_active', true)
                 ->orderBy('name')
                 ->get()
+            : collect();
+
+        $eligibleClinicians = $user->can('manage clinical evaluation assignments')
+            ? $this->assignmentService->eligibleClinicians()
             : collect();
 
         $invoicePlanItems = $user->can('manage invoices')
@@ -154,7 +231,7 @@ class PatientWorkspaceBuilder
             'invoices' => $invoices,
             'payableInvoices' => $payableInvoices,
             'unallocatedPayments' => $unallocatedPayments,
-            'alerts' => $this->alerts($currentPlan, $plan, $financial, $bookingOptions, $upcomingAppointments),
+            'alerts' => $this->alerts($currentPlan, $plan, $financial, $bookingOptions, $upcomingAppointments, $clinical),
             'recommendation' => $this->recommendation(
                 $patient,
                 $user,
@@ -162,9 +239,16 @@ class PatientWorkspaceBuilder
                 $financial,
                 $bookingOptions,
                 $upcomingAppointments,
-                $latestOutstandingInvoice
+                $latestOutstandingInvoice,
+                $clinical
             ),
-            'workflow' => $this->workflow($patient, $currentPlan, $plan),
+            'workflow' => $this->workflow($patient, $currentPlan, $clinical),
+            'clinical' => $clinical,
+            'openEvaluationAssignment' => $openAssignment,
+            'eligibleClinicians' => $eligibleClinicians,
+            'currentEvaluation' => $currentEvaluation,
+            'clinicalPlan' => $clinicalPlan,
+            'clinicallyApprovedPlan' => $clinicallyApprovedPlan,
             'bookingOptions' => $bookingOptions,
             'upcomingAppointments' => $upcomingAppointments,
             'patientAppointments' => $patientAppointments,
@@ -309,21 +393,25 @@ class PatientWorkspaceBuilder
         ];
     }
 
-    private function workflow(Patient $patient, ?PatientServicePlan $plan, array $summary): array
+    private function workflow(Patient $patient, ?PatientServicePlan $plan, array $clinical): array
     {
-        $hasBooking = Appointment::query()
+        $planItemIds = $plan?->items()->pluck('id') ?? collect();
+        $planAppointments = Appointment::query()
             ->where('patient_id', $patient->id)
-            ->whereNotNull('patient_service_plan_item_id')
-            ->exists();
+            ->whereIn('patient_service_plan_item_id', $planItemIds);
+        $hasBooking = (clone $planAppointments)->exists();
+        $hasCompletion = (clone $planAppointments)->whereHas('therapySession')->exists();
+        $evaluationComplete = in_array($clinical['key'], ['plan_preparation', 'handoff_ready', 'operational'], true);
+        $planComplete = in_array($clinical['key'], ['handoff_ready', 'operational'], true);
 
         return [
-            ['label' => 'الخطة', 'complete' => (bool) $plan],
-            ['label' => 'الدفع', 'complete' => $summary['paid_cents'] > 0],
-            ['label' => 'التخصيص', 'complete' => $summary['allocated_cents'] > 0],
-            ['label' => 'الحجز', 'complete' => $hasBooking],
-            // Reception V2 and Completion V2 do not yet prove these stages belong to the active plan.
-            ['label' => 'الحضور', 'complete' => false],
-            ['label' => 'الجلسة', 'complete' => false],
+            ['label' => 'التسجيل', 'complete' => true, 'current' => false],
+            ['label' => 'إسناد التقييم', 'complete' => $clinical['key'] !== 'awaiting_assignment', 'current' => $clinical['key'] === 'awaiting_assignment'],
+            ['label' => 'التقييم', 'complete' => $evaluationComplete, 'current' => in_array($clinical['key'], ['awaiting_evaluation', 'evaluation_draft'], true)],
+            ['label' => 'الخطة العلاجية', 'complete' => $planComplete, 'current' => $clinical['key'] === 'plan_preparation'],
+            ['label' => 'الإسناد', 'complete' => false, 'current' => $clinical['key'] === 'handoff_ready'],
+            ['label' => 'الحجز', 'complete' => $hasBooking, 'current' => $clinical['key'] === 'operational' && ! $hasBooking],
+            ['label' => 'المتابعة', 'complete' => $hasCompletion, 'current' => $hasBooking && ! $hasCompletion],
         ];
     }
 
@@ -332,12 +420,15 @@ class PatientWorkspaceBuilder
         array $summary,
         array $financial,
         Collection $bookingOptions,
-        Collection $upcomingAppointments
+        Collection $upcomingAppointments,
+        array $clinical
     ): Collection {
         $alerts = collect();
 
-        if (! $plan) {
-            $alerts->push(['tone' => 'warning', 'text' => 'لا توجد خطة خدمات نشطة لهذه الحالة.']);
+        if (! $plan && in_array($clinical['key'], ['awaiting_assignment', 'awaiting_evaluation', 'evaluation_draft'], true)) {
+            $alerts->push(['tone' => 'primary', 'text' => $clinical['title'].': '.$clinical['description']]);
+        } elseif (! $plan) {
+            $alerts->push(['tone' => 'warning', 'text' => 'لا توجد خطة خدمات حالية لهذه الحالة.']);
         } elseif ($plan->items->isEmpty()) {
             $alerts->push(['tone' => 'warning', 'text' => 'الخطة النشطة لا تحتوي خدمات بعد.']);
         }
@@ -368,8 +459,39 @@ class PatientWorkspaceBuilder
         array $financial,
         Collection $bookingOptions,
         Collection $upcomingAppointments,
-        ?Invoice $outstandingInvoice
+        ?Invoice $outstandingInvoice,
+        array $clinical
     ): array {
+        if ($clinical['key'] === 'awaiting_assignment') {
+            return $user->can('manage clinical evaluation assignments')
+                ? $this->action('إسناد التقييم', $clinical['description'], route('patients.workspace', $patient), 'clinical')
+                : $this->action('بانتظار إسناد التقييم', $clinical['description'], null);
+        }
+
+        if ($clinical['key'] === 'awaiting_evaluation') {
+            return $clinical['can_edit_evaluation']
+                ? $this->action('بدء التقييم', $clinical['description'], route('patients.workspace', $patient), 'clinical')
+                : $this->action('بانتظار التقييم', $clinical['description'], null);
+        }
+
+        if ($clinical['key'] === 'evaluation_draft') {
+            return $clinical['can_edit_evaluation']
+                ? $this->action('استكمال التقييم', $clinical['description'], route('patients.workspace', $patient), 'clinical')
+                : $this->action('التقييم قيد الاستكمال', $clinical['description'], null);
+        }
+
+        if ($clinical['key'] === 'plan_preparation') {
+            return $user->can('manage clinical evaluations')
+                ? $this->action('إعداد الخطة العلاجية', $clinical['description'], route('patients.workspace', $patient), 'clinical-plan')
+                : $this->action('الخطة العلاجية قيد الإعداد', $clinical['description'], null);
+        }
+
+        if ($clinical['key'] === 'handoff_ready') {
+            return $user->can('manage patient service plans')
+                ? $this->action('الخطة جاهزة للاستقبال', $clinical['description'], route('patients.workspace', $patient), 'plan')
+                : $this->action('الخطة جاهزة للاستقبال', $clinical['description'], null);
+        }
+
         if (! $plan) {
             return $user->can('manage patient service plans')
                 ? $this->action('إنشاء خطة خدمات', 'ابدأ بتحديد الخدمات والكميات المطلوبة للحالة.', route('patients.service-plans.create', $patient), 'plan')
@@ -408,7 +530,7 @@ class PatientWorkspaceBuilder
             : $this->action('متابعة الحالة', 'لا توجد خطوة تشغيلية متاحة ضمن صلاحياتك الحالية.', route('patients.show', $patient));
     }
 
-    private function action(string $title, string $description, string $url, ?string $panel = null): array
+    private function action(string $title, string $description, ?string $url, ?string $panel = null): array
     {
         return compact('title', 'description', 'url', 'panel');
     }

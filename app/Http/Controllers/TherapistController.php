@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Appointment;
 use App\Models\Attendance;
 use App\Models\Setting;
+use App\Models\Specialty;
 use App\Models\Therapist;
-use App\Models\TherapistServiceRate;
+use App\Models\TherapistEarning;
 use App\Models\TherapistWorkPeriod;
 use App\Models\TherapyProgram;
+use App\Models\TherapySession;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -70,13 +72,28 @@ class TherapistController extends Controller
             'user',
             'specialties',
             'services.specialty',
+            'serviceRates.service.specialty',
+            'serviceRates.creator',
             'workPeriods',
         ]);
-        $currentRates = $therapist->services->mapWithKeys(function ($service) use ($therapist) {
-            $rate = TherapistServiceRate::resolveFor($therapist, $service, today());
+        $rateDate = today();
+        $eligibleRates = $therapist->serviceRates
+            ->filter(fn ($rate) => $rate->effective_from->lte($rateDate)
+                && (! $rate->effective_to || $rate->effective_to->gte($rateDate)))
+            ->sort(function ($left, $right) {
+                $dateComparison = $right->effective_from->getTimestamp()
+                    <=> $left->effective_from->getTimestamp();
 
-            return [$service->id => $rate?->amount];
-        });
+                return $dateComparison !== 0 ? $dateComparison : $right->id <=> $left->id;
+            });
+        $currentRates = $therapist->services->mapWithKeys(
+            fn ($service) => [$service->id => $eligibleRates->firstWhere('service_id', $service->id)]
+        );
+        $specialties = Specialty::query()
+            ->where('is_active', true)
+            ->with(['services' => fn ($query) => $query->where('is_active', true)->orderBy('name')])
+            ->orderBy('name')
+            ->get();
         $schedule = collect(TherapistWorkPeriod::WEEKDAYS)->map(function ($label, $weekday) use ($therapist) {
             return [
                 'weekday' => $weekday,
@@ -90,8 +107,90 @@ class TherapistController extends Controller
                     ->values(),
             ];
         })->values();
+        $todayAppointments = collect();
+        $upcomingAppointments = collect();
+        $upcomingAppointmentCount = 0;
+        $canViewAppointments = auth()->user()->can('view appointments');
+        $canViewTherapyKpis = auth()->user()->can('view therapy');
+        $canViewEarningKpi = auth()->user()->can('manage payroll');
 
-        return view('hr.therapists.show', compact('therapist', 'currentRates', 'schedule'));
+        if ($therapist->user_id && $canViewAppointments) {
+            $appointmentQuery = Appointment::query()
+                ->with([
+                    'patient',
+                    'sessionType',
+                    'patientServicePlanItem.service',
+                    'checkin',
+                    'therapySession',
+                ])
+                ->where('therapist_id', $therapist->user_id);
+
+            $todayAppointments = (clone $appointmentQuery)
+                ->whereDate('scheduled_at', today())
+                ->orderBy('scheduled_at')
+                ->get();
+            $upcomingAppointments = (clone $appointmentQuery)
+                ->whereBetween('scheduled_at', [
+                    today()->addDay()->startOfDay(),
+                    today()->addDays(7)->endOfDay(),
+                ])
+                ->where('status', 'مجدول')
+                ->orderBy('scheduled_at')
+                ->limit(10)
+                ->get();
+            $upcomingAppointmentCount = Appointment::query()
+                ->where('therapist_id', $therapist->user_id)
+                ->whereBetween('scheduled_at', [today()->addDay()->startOfDay(), today()->addDays(7)->endOfDay()])
+                ->where('status', 'مجدول')
+                ->count();
+        }
+
+        $completedSessionsThisMonth = null;
+        $activeCases = null;
+        if ($therapist->user_id && $canViewTherapyKpis) {
+            $completedSessionsThisMonth = TherapySession::query()
+                ->whereHas('program', fn ($query) => $query->where('therapist_id', $therapist->user_id))
+                ->where('status', 'مكتملة')
+                ->whereBetween('session_date', [today()->startOfMonth(), today()->endOfMonth()])
+                ->count();
+            $activeCases = TherapyProgram::query()
+                ->where('therapist_id', $therapist->user_id)
+                ->where('status', TherapyProgram::STATUS_ACTIVE)
+                ->count();
+        }
+
+        $monthlyEarnings = null;
+        if ($canViewEarningKpi) {
+            $monthlyEarnings = TherapistEarning::query()
+                ->where('therapist_id', $therapist->id)
+                ->whereHas('session', fn ($query) => $query->whereBetween(
+                    'session_date',
+                    [today()->startOfMonth(), today()->endOfMonth()]
+                ))
+                ->sum('amount');
+        }
+
+        $workspaceStats = [
+            'today_appointments' => $todayAppointments->count(),
+            'upcoming_appointments_7_days' => $upcomingAppointmentCount,
+            'assigned_services' => $therapist->services->count(),
+            'completed_sessions_this_month' => $completedSessionsThisMonth,
+            'active_cases' => $activeCases,
+            'monthly_earnings' => $monthlyEarnings,
+        ];
+
+        return view('hr.therapists.show', compact(
+            'therapist',
+            'currentRates',
+            'specialties',
+            'schedule',
+            'todayAppointments',
+            'upcomingAppointments',
+            'workspaceStats',
+            'canViewAppointments',
+            'canViewTherapyKpis',
+            'canViewEarningKpi'
+        ));
     }
 
     public function store(Request $request)
@@ -110,6 +209,9 @@ class TherapistController extends Controller
             'is_active' => 'nullable|boolean',
         ]);
 
+        $data['monthly_salary'] = $data['monthly_salary'] ?? 0;
+        $data['daily_salary'] = $data['daily_salary'] ?? 0;
+
         if (! array_key_exists('commission_rate', $data) || $data['commission_rate'] === null) {
             $data['commission_rate'] = (float) (Setting::first()?->default_therapist_commission_rate ?? 0);
         }
@@ -117,6 +219,30 @@ class TherapistController extends Controller
         Therapist::create($data);
 
         return redirect()->route('therapists.index')->with('success', 'تم إضافة الأخصائي بنجاح');
+    }
+
+    public function edit(Therapist $therapist)
+    {
+        return view('hr.therapists.edit', compact('therapist'));
+    }
+
+    public function update(Request $request, Therapist $therapist)
+    {
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'specialization' => 'nullable|string|max:255',
+            'phone' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
+            'license_number' => 'nullable|string|max:255',
+            'hire_date' => 'nullable|date',
+            'is_active' => 'required|boolean',
+        ]);
+
+        $therapist->update($data);
+
+        return redirect()
+            ->route('therapists.show', $therapist)
+            ->with('success', 'تم تحديث بيانات الأخصائي بنجاح.');
     }
 
     public function updateSchedule(Request $request, Therapist $therapist)
@@ -173,7 +299,9 @@ class TherapistController extends Controller
             $therapist->workPeriods()->createMany($normalized);
         });
 
-        return back()->with('success', 'تم حفظ جدول عمل الأخصائي بنجاح.');
+        return back()
+            ->with('success', 'تم حفظ جدول عمل الأخصائي بنجاح.')
+            ->with('workspace_tab', 'schedule');
     }
 
     // تسجيل حضور يومي للأخصائيين
