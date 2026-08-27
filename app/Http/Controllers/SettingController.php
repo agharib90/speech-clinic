@@ -58,7 +58,7 @@ class SettingController extends Controller
 
     private function settings(): Setting
     {
-        return Setting::firstOrCreate(['id' => 1], Setting::defaults());
+        return Setting::firstOrCreate([], Setting::defaults());
     }
 
     private function ensureSettingsAccess(): void
